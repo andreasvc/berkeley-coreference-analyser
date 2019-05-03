@@ -44,9 +44,9 @@ Running each with no arguments will provide help information.  Also see the
 sample folders for example runs.  These were generated as follows:
 
 ```
-./classify_coreference_errors.py data/classified/stanford data/gold/ data/homogenised/stanford.homogenised.out T
+./classify_coreference_errors.py data/classified/stanford data/gold/ data/homogenised/stanford.homogenised.out
 
-./print_errors.py data/pretty_printed/stanford data/gold/ data/homogenised/stanford.homogenised.out F
+./print_errors.py data/pretty_printed/stanford data/gold/ data/homogenised/stanford.homogenised.out
 
 ./coreference_format_conversion.py data/homogenised/stanford.homogenised stanford_xml data/stanford_xml_out/ data/gold/
 ```
@@ -88,9 +88,9 @@ so by the final file there are no errors left.
 Running the commands with an invalid number of arguments will give you the following execution information:
 
 ```
- ./classify_coreference_errors.py <output_prefix> <gold_dir> <test_file> [remove singletons? T | F (default is True)]
+./classify_coreference_errors.py <prefix> <gold_dir> <test_file> [--keepsingletons] [--lang=<en|nl>]
 
-./print_errors.py <prefix> <gold_dir> <test> [resolve span errors first? T | F]
+./print_errors.py <prefix> <gold_dir> <test_file> [--resolvespanerrors] [--lang=<en|nl>]
 
 ./coreference_format_conversion.py <prefix> <[cherrypicker,ims,bart,conll,stanford_xml,stanford,uiuc,reconcile]> <dir | file> <gold dir>
 ```
@@ -110,3 +110,8 @@ need to be altered is the head finder.  I do not plan to add support for other
 languages in the near future, but am happy to incorporate proposals of code
 amendments!
 
+UPDATE: Pass the option --lang=nl to work with Dutch data; assumes Alpino trees
+and rich POS tags in gold CoNLL data; POS tags should have parentheses replaced
+by square brackets; e.g., `VNW[pers,pron,nomin,vol,1,ev]`.
+To add support for another language, search for the variable `lang` in
+`nlp_util/head_finder.py` and `nlp_util/coreference.py`.

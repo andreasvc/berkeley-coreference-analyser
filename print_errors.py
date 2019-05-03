@@ -3,26 +3,38 @@
 # vim: set ts=2 sw=2 noet:
 
 import sys
-from nlp_util import coreference_reading, coreference_rendering, coreference, init
+import getopt
+from nlp_util import (coreference_reading, coreference_rendering, coreference,
+		init, head_finder)
 
-if __name__ == '__main__':
-	init.argcheck(sys.argv, 4, 5, "Print coreference resolution errors", "<prefix> <gold_dir> <test> [resolve span errors first? T | F]")
 
-	auto = coreference_reading.read_conll_coref_system_output(sys.argv[3])
-	gold = coreference_reading.read_conll_matching_files(auto, sys.argv[2])
+def main():
+	try:
+		opts, args = getopt.gnu_getopt(
+				sys.argv[1:], '', ['resolvespanerrors', 'lang='])
+		output_prefix, gold_dir, test_file = args
+	except (getopt.GetoptError, ValueError):
+		print('Print coreference resolution errors')
+		print('./%s <prefix> <gold_dir> <test_file> '
+				'[--resolvespanerrors] [--lang=<en|nl>]' % sys.argv[0])
+		return
+	opts = dict(opts)
+	lang = opts.get('--lang', 'en')
+	auto = coreference_reading.read_conll_coref_system_output(test_file)
+	gold = coreference_reading.read_conll_matching_files(auto, gold_dir, lang)
 
-	out_cluster_errors = open(sys.argv[1] + '.cluster_errors', 'w')
-	out_cluster_context = open(sys.argv[1] + '.cluster_context', 'w')
-	out_cluster_missing = open(sys.argv[1] + '.cluster_missing', 'w')
-	out_cluster_extra = open(sys.argv[1] + '.cluster_extra', 'w')
-	out_mention_list = open(sys.argv[1] + '.mention_list', 'w')
-	out_mention_text = open(sys.argv[1] + '.mention_text', 'w')
+	out_cluster_errors = open(output_prefix + '.cluster_errors', 'w')
+	out_cluster_context = open(output_prefix + '.cluster_context', 'w')
+	out_cluster_missing = open(output_prefix + '.cluster_missing', 'w')
+	out_cluster_extra = open(output_prefix + '.cluster_extra', 'w')
+	out_mention_list = open(output_prefix + '.mention_list', 'w')
+	out_mention_text = open(output_prefix + '.mention_text', 'w')
 	out_files = [out_cluster_errors,
-	             out_cluster_context,
-	             out_cluster_missing,
-	             out_cluster_extra,
-	             out_mention_list,
-	             out_mention_text]
+			out_cluster_context,
+			out_cluster_missing,
+			out_cluster_extra,
+			out_mention_list,
+			out_mention_text]
 	init.header(sys.argv, out_files)
 
 	for function, outfile in [
@@ -64,7 +76,7 @@ if __name__ == '__main__':
 		gold_mention_set = coreference.set_of_mentions(gold_clusters)
 		auto_mention_set = coreference.set_of_mentions(auto_clusters)
 
-		if len(sys.argv) > 4 and sys.argv[4] == 'T':
+		if '--resolvespanerrors' in opts:
 			coreference_rendering.match_boundaries(gold_mention_set, auto_mention_set, auto_mentions, auto_clusters, auto_cluster_set, text, gold_parses, gold_heads)
 
 		# Coloured mention output
@@ -80,3 +92,6 @@ if __name__ == '__main__':
 		coreference_rendering.print_cluster_missing(out_cluster_errors, out_cluster_context, out_cluster_missing, text, gold_cluster_set, covered, gold_parses, gold_heads)
 		coreference_rendering.print_cluster_extra(out_cluster_errors, out_cluster_context, out_cluster_extra, text, auto_cluster_set, covered, gold_parses, gold_heads)
 
+
+if __name__ == '__main__':
+	main()

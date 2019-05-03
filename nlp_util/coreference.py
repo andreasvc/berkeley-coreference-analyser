@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
 
+import re
 import sys
 from collections import defaultdict
 import string
@@ -65,14 +66,24 @@ def mention_head(mention, text, parses, heads, default_last=True):
 			return None
 	return head_finder.get_head(heads[sentence], node)
 
-def mention_type(mention, text, parses, heads):
+def mention_type(mention, text, parses, heads, lang):
 	head_span, head_word, head_pos = mention_head(mention, text, parses, heads)
-	if mention[2] - mention[1] == 1 and (head_pos in ["PRP", "PRP$", "WP", "WP$", "WDT", "WRB", "DT"] or head_word.lower() in pronoun_properties):
-		return "pronoun"
-	elif head_pos in ["NNP", "NNPS"]:
-		return "name"
+	if lang == 'en':
+		if mention[2] - mention[1] == 1 and (head_pos in ["PRP", "PRP$", "WP", "WP$", "WDT", "WRB", "DT"] or head_word.lower() in english_pronoun_properties):
+			return "pronoun"
+		elif head_pos in ["NNP", "NNPS"]:
+			return "name"
+		else:
+			return 'nominal'
+	elif lang == 'nl':
+		if mention[2] - mention[1] == 1 and head_pos.startswith('VNW'):
+			return "pronoun"
+		elif head_pos.startswith('SPEC') or head_pos.startswith('N[eigen'):
+			return "name"
+		else:
+			return 'nominal'
 	else:
-		return 'nominal'
+		raise ValueError('Unknown language: %s' % lang)
 
 def mention_text(mention, text):
 	sentence, start, end = mention
@@ -112,13 +123,49 @@ PRO_FEMALE = 1
 PRO_MALE = 2
 PRO_NEUTER = 3
 
+
+def pronoun_properties(mtext, mention, parse, head, lang):
+	if lang == 'en':
+		return pronoun_properties_text(mtext)
+	gender = number = person = 'unknown'
+	if lang == 'nl':
+		node = parse.get_nodes('lowest', mention[1], mention[2])
+		# if there is no constituent spanning this mention, it's not a pronoun
+		if node is None:
+			return gender, number, person
+		_, _, postag = head_finder.get_head(head, node)
+		feat = re.split('[,()[]]', postag)
+
+		if 'masc' in feat:
+			gender = 'male'
+		elif 'fem' in feat:
+			gender = 'female'
+		elif 'onz' in feat:
+			gender = 'neuter'
+
+		if 'ev' in feat:
+			number = 'single'
+		elif 'mv' in feat:
+			number = 'plural'
+
+		if '1' in feat:
+			person = 'first'
+		elif any(a.startswith('2') for a in feat):
+			person = 'second'
+		elif any(a.startswith('3') for a in feat):
+			person = 'third'
+	else:
+		raise ValueError('Unknown language: %s' % lang)
+	return gender, number, person
+
+
 def pronoun_properties_text(text):
 	gender = 'unknown'
 	number = 'unknown'
 	person = 'unknown'
 	text = text.lower()
-	if text in pronoun_properties:
-		nums = pronoun_properties[text]
+	if text in english_pronoun_properties:
+		nums = english_pronoun_properties[text]
 
 		if nums[0] == PRO_FEMALE:
 			gender = 'female'
@@ -133,18 +180,18 @@ def pronoun_properties_text(text):
 			number = 'plural'
 
 		if nums[2] == PRO_FIRST:
-			gender = 'first'
+			person = 'first'
 		elif nums[2] == PRO_SECOND:
-			gender = 'second'
+			person = 'second'
 		elif nums[2] == PRO_THIRD:
-			gender = 'third'
+			person = 'third'
 
 	return gender, number, person
 
 # Notes:
 # Plural and singular are defined in terms of the property of the entity being
 # denoted.
-pronoun_properties = {
+english_pronoun_properties = {
 	"her": (PRO_FEMALE, PRO_SINGLE, PRO_THIRD),
 	"hers": (PRO_FEMALE, PRO_SINGLE, PRO_THIRD),
 	"herself": (PRO_FEMALE, PRO_SINGLE, PRO_THIRD),
@@ -241,4 +288,3 @@ if __name__ == '__main__':
 	print "Running doctest"
 	import doctest
 	doctest.testmod()
-

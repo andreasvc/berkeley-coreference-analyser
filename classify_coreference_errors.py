@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 
-import sys, string
+import sys
+import string
+import getopt
 from collections import defaultdict
 
 from nlp_util import coreference, init, coreference_reading, coreference_rendering, head_finder, nlp_eval
 
-def get_cluster_info(cluster, gold_doc):
+def get_cluster_info(cluster, gold_doc, lang):
 	text = gold_doc['text']
 	gold_ner = gold_doc['ner']
+	parses = gold_doc['parses']
+	heads = gold_doc['heads']
 
 	ner, number, person, gender = set(), set(), set(), set()
 	for mention in cluster:
 		mtext = coreference_rendering.mention_text(text, mention).lower()
-		tgender, tnumber, tperson = coreference.pronoun_properties_text(mtext)
+		parse = parses[mention[0]]
+		head = heads[mention[0]]
+		tgender, tnumber, tperson = coreference.pronoun_properties(
+				mtext, mention, parse, head, lang)
 		if tgender != 'unknown':
 			gender.add(tgender)
 		if tnumber != 'unknown':
@@ -33,14 +40,14 @@ def match_boundaries(gold_mention_set, auto_mention_set, auto_mentions, auto_clu
 	for amention in unique_to_auto:
 		sentence, astart, aend = amention
 		while (astart < aend - 1 and
-		       (text[sentence][astart] == "the" or
-		       (len(text[sentence][astart]) == 1 and
-		       text[sentence][astart][0] not in string.letters))):
+				(text[sentence][astart] == "the" or
+				(len(text[sentence][astart]) == 1 and
+				text[sentence][astart][0] not in string.letters))):
 			astart += 1
 		while (astart < aend - 1 and
-		       (text[sentence][aend - 1] == "'s" or
-		       (len(text[sentence][aend - 1]) == 1 and
-		       text[sentence][aend - 1][0] not in string.letters))):
+				(text[sentence][aend - 1] == "'s" or
+				(len(text[sentence][aend - 1]) == 1 and
+				text[sentence][aend - 1][0] not in string.letters))):
 			aend -= 1
 		for gmention in unique_to_gold:
 			if gmention in used_gold:
@@ -49,14 +56,14 @@ def match_boundaries(gold_mention_set, auto_mention_set, auto_mentions, auto_clu
 			if sentence != gsentence:
 				continue
 			while (gstart < gend - 1 and
-			       (text[sentence][gstart] == "the" or
-			       (len(text[sentence][gstart]) == 1 and
-			       text[sentence][gstart][0] not in string.letters))):
+					(text[sentence][gstart] == "the" or
+					(len(text[sentence][gstart]) == 1 and
+					text[sentence][gstart][0] not in string.letters))):
 				gstart += 1
 			while (gstart < gend - 1 and
-			       (text[sentence][gend - 1] == "'s" or
-			       (len(text[sentence][gend - 1]) == 1 and
-			       text[sentence][gend - 1][0] not in string.letters))):
+					(text[sentence][gend - 1] == "'s" or
+					(len(text[sentence][gend - 1]) == 1 and
+					text[sentence][gend - 1][0] not in string.letters))):
 				gend -= 1
 			if astart == gstart and aend == gend:
 				mapping[amention] = gmention
@@ -146,7 +153,7 @@ def match_boundaries(gold_mention_set, auto_mention_set, auto_mentions, auto_clu
 		nchanges.append(tuple(properties))
 	return nchanges
 
-def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc):
+def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc, lang):
 	ans = []
 	rest = cluster.difference(part)
 
@@ -156,7 +163,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Size of rest
 	ans.append(len(rest)) # 1
 
-	# If size 1, what the text is
+	# If size 1, what the text i
 	mtext = None
 	if len(part) == 1:
 		mention = iter(part).next()
@@ -169,11 +176,11 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	for mention in cluster:
 		if mention in auto_mentions:
 			acluster.add(mention)
-	non_pronoun = min_non_pronoun(acluster, text, parses, heads)
+	non_pronoun = min_non_pronoun(acluster, text, parses, heads, lang)
 	if non_pronoun is not None and non_pronoun not in part:
 		for mention in part:
 			if mention in auto_mentions and mention < non_pronoun:
-				mtype = coreference.mention_type(mention, text, parses, heads)
+				mtype = coreference.mention_type(mention, text, parses, heads, lang)
 				if mtype == 'pronoun':
 					count += 1
 	ans.append("%d_cataphoric" % count)
@@ -181,7 +188,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Number of pronouns, nominals, names present in it
 	type_counts = {'pronoun': 0, 'name': 0, 'nominal': 0}
 	for mention in part:
-		mtype = coreference.mention_type(mention, text, parses, heads)
+		mtype = coreference.mention_type(mention, text, parses, heads, lang)
 		type_counts[mtype] += 1
 	ans.append(type_counts['name']) # 3
 	ans.append(type_counts['nominal']) # 4
@@ -190,7 +197,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Number of pronouns, nominals, names, in rest
 	type_counts = {'pronoun': 0, 'name': 0, 'nominal': 0}
 	for mention in rest:
-		mtype = coreference.mention_type(mention, text, parses, heads)
+		mtype = coreference.mention_type(mention, text, parses, heads, lang)
 		type_counts[mtype] += 1
 	ans.append(type_counts['name']) # 6
 	ans.append(type_counts['nominal']) # 7
@@ -213,11 +220,11 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Whether there is an exact string match between a mention in the part and cluster (excluding pronouns)
 	match_present = 'no_string_match'
 	for smention in part:
-		mtype = coreference.mention_type(smention, text, parses, heads)
+		mtype = coreference.mention_type(smention, text, parses, heads, lang)
 		if mtype == 'pronoun':
 			continue
 		for rmention in rest:
-			mtype = coreference.mention_type(rmention, text, parses, heads)
+			mtype = coreference.mention_type(rmention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				continue
 			stext = coreference_rendering.mention_text(text, smention).lower()
@@ -232,11 +239,11 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Whether there is a head match between a mention in the part and cluster (excluding pronouns)
 	match_present = 'no_head_match'
 	for smention in part:
-		mtype = coreference.mention_type(smention, text, parses, heads)
+		mtype = coreference.mention_type(smention, text, parses, heads, lang)
 		if mtype == 'pronoun':
 			continue
 		for rmention in rest:
-			mtype = coreference.mention_type(rmention, text, parses, heads)
+			mtype = coreference.mention_type(rmention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				continue
 			shead = coreference.mention_head(smention, text, parses, heads)[1].lower()
@@ -269,8 +276,8 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	ans.append(action) # 14
 
 	# NER, number, person, gender
-	cproperties = get_cluster_info(rest, gold_doc)
-	pproperties = get_cluster_info(part, gold_doc)
+	cproperties = get_cluster_info(rest, gold_doc, lang)
+	pproperties = get_cluster_info(part, gold_doc, lang)
 	for prop in xrange(4):
 		ans.append(cproperties[prop] == pproperties[prop])
 		cprop = list(cproperties[prop])
@@ -282,12 +289,12 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 
 	return ans
 
-def mention_error_properties(mention, cluster, text, parses, heads, gold_doc):
+def mention_error_properties(mention, cluster, text, parses, heads, gold_doc, lang):
 	ans = []
 	rest = cluster.difference({mention})
 
 	# Type of mention
-	mtype = coreference.mention_type(mention, text, parses, heads)
+	mtype = coreference.mention_type(mention, text, parses, heads, lang)
 	ans.append(mtype)
 
 	# Text of mention
@@ -338,12 +345,12 @@ def mention_error_properties(mention, cluster, text, parses, heads, gold_doc):
 	ans.append(mention == max(cluster))
 
 	# Is it a case of cataphora?
-	non_pronoun = min_non_pronoun(cluster, text, parses, heads)
+	non_pronoun = min_non_pronoun(cluster, text, parses, heads, lang)
 	ans.append(non_pronoun is not None and mention < non_pronoun)
 
 	# Do NER, number, person, or gender of mention and cluster match?
-	cluster_properties = get_cluster_info(rest, gold_doc)
-	mention_properties = get_cluster_info({mention}, gold_doc)
+	cluster_properties = get_cluster_info(rest, gold_doc, lang)
+	mention_properties = get_cluster_info({mention}, gold_doc, lang)
 	words = ['ner', 'number', 'person', 'gender']
 	for i in xrange(4):
 		if len(mention_properties[i]) == 0 or len(cluster_properties[i]) == 0:
@@ -355,7 +362,7 @@ def mention_error_properties(mention, cluster, text, parses, heads, gold_doc):
 
 	return ans
 
-def cluster_error_properties(cluster, text, parses, heads, gold_doc):
+def cluster_error_properties(cluster, text, parses, heads, gold_doc, lang):
 	ans = []
 
 	# How big is the cluster
@@ -364,7 +371,7 @@ def cluster_error_properties(cluster, text, parses, heads, gold_doc):
 	# Counts of each type in the cluster
 	counts = [0, 0, 0]
 	for mention in cluster:
-		mtype = coreference.mention_type(mention, text, parses, heads)
+		mtype = coreference.mention_type(mention, text, parses, heads, lang)
 		if mtype == 'name':
 			counts[0] += 1
 		elif mtype == 'nominal':
@@ -377,7 +384,7 @@ def cluster_error_properties(cluster, text, parses, heads, gold_doc):
 	if counts[0] + counts[1] == 1 and counts[2] == 1:
 		pronoun = None
 		for mention in cluster:
-			mtype = coreference.mention_type(mention, text, parses, heads)
+			mtype = coreference.mention_type(mention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				pronoun = mention
 		mtext = coreference_rendering.mention_text(text, pronoun).lower()
@@ -387,10 +394,10 @@ def cluster_error_properties(cluster, text, parses, heads, gold_doc):
 
 	# Number of cataphoric pronouns
 	cataphora = 0
-	non_pronoun = min_non_pronoun(cluster, text, parses, heads, True)
+	non_pronoun = min_non_pronoun(cluster, text, parses, heads, lang, True)
 	for mention in cluster:
 		if mention < non_pronoun:
-			mtype = coreference.mention_type(mention, text, parses, heads)
+			mtype = coreference.mention_type(mention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				cataphora += 1
 	ans.append(cataphora)
@@ -418,7 +425,7 @@ def cluster_error_properties(cluster, text, parses, heads, gold_doc):
 
 	return ans
 
-def repair(auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gold_clusters, gold_mentions, gold_doc):
+def repair(auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gold_clusters, gold_mentions, gold_doc, lang):
 	changes = defaultdict(lambda: [])
 
 	# Split auto into pieces that each contain only one cluster
@@ -431,10 +438,10 @@ def repair(auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gol
 				nauto.append(intersection)
 				used.update(intersection)
 				if len(intersection) != len(acluster):
-					properties = ['split'] + split_merge_properties(intersection, acluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc)
+					properties = ['split'] + split_merge_properties(intersection, acluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc, lang)
 					changes["split"].append((intersection.copy(), acluster.copy(), '', properties))
 		for mention in acluster.difference(used):
-			properties = ['split'] + split_merge_properties({mention}, acluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc)
+			properties = ['split'] + split_merge_properties({mention}, acluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc, lang)
 			changes["split"].append(({mention}, acluster.copy(), 'going nowhere', properties))
 			changes["remove"].append(({mention},))
 
@@ -449,25 +456,25 @@ def repair(auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gol
 	for gcluster in gold:
 		for acluster in nauto:
 			if acluster != gcluster and acluster.issubset(gcluster):
-				properties = ['merge'] + split_merge_properties(acluster, gcluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc)
+				properties = ['merge'] + split_merge_properties(acluster, gcluster, auto, gold, text, parses, heads, gold_mentions, gold_clusters, auto_mentions, gold_doc, lang)
 				changes["merge"].append((acluster.copy(), gcluster.copy(), properties))
 
 	return changes
 
-def min_non_pronoun(cluster, text, parses, heads, check_head=False):
+def min_non_pronoun(cluster, text, parses, heads, lang, check_head=False):
 	ans = None
 	for mention in cluster:
-		if coreference.mention_type(mention, text, parses, heads) == 'pronoun':
+		if coreference.mention_type(mention, text, parses, heads, lang) == 'pronoun':
 			continue
 		if check_head:
 			head = coreference.mention_head(mention, text, parses, heads, default_last=True)
-			if coreference.mention_type((mention[0], head[0][0], head[0][1]), text, parses, heads) == 'pronoun':
+			if coreference.mention_type((mention[0], head[0][0], head[0][1]), text, parses, heads, lang) == 'pronoun':
 				continue
 		if ans is None or ans > mention:
 			ans = mention
 	return ans
 
-def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_mentions, gold_doc):
+def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_mentions, gold_doc, lang):
 	# Not an Entity
 	# A set of splits to singles that cover an entire cluster
 	to_add = defaultdict(lambda: [])
@@ -475,7 +482,7 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 		is_disjoint = True
 		for mention in split[1]:
 			if mention in gold_mention_set:
-				mtype = coreference.mention_type(mention, text, parses, heads)
+				mtype = coreference.mention_type(mention, text, parses, heads, lang)
 				if mtype != 'pronoun':
 					is_disjoint = False
 					break
@@ -495,7 +502,7 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 			split_cluster.update(split[0])
 		if len(split_cluster) == 1:
 			continue
-		properties = ['extra'] + cluster_error_properties(split_cluster, text, parses, heads, gold_doc)
+		properties = ['extra'] + cluster_error_properties(split_cluster, text, parses, heads, gold_doc, lang)
 		changes['extra entity'].append((split_cluster, cluster.copy(), properties))
 		for split in splits:
 			changes['split'].remove(split)
@@ -517,11 +524,11 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 			if mention not in auto_mentions:
 				missing += 1
 			else:
-				if coreference.mention_type(mention, text, parses, heads) != 'pronoun':
+				if coreference.mention_type(mention, text, parses, heads, lang) != 'pronoun':
 					is_disjoint = False
 					break
 		if is_disjoint and missing > 1:
-			properties = ['missing'] + cluster_error_properties(cluster, text, parses, heads, gold_doc)
+			properties = ['missing'] + cluster_error_properties(cluster, text, parses, heads, gold_doc, lang)
 			changes['missing entity'].append((cluster.copy(),properties))
 			for mention in cluster:
 				if mention in auto_mentions:
@@ -543,8 +550,8 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 	# Remove the splits and merges that involve the earliest non-pronoun mentions in the cluster
 	to_remove = []
 	for split in changes['split']:
-		if min_non_pronoun(split[0], text, parses, heads) == min_non_pronoun(split[1], text, parses, heads):
-			if min_non_pronoun(split[0], text, parses, heads) is None and min(split[0]) != min(split[1]):
+		if min_non_pronoun(split[0], text, parses, heads, lang) == min_non_pronoun(split[1], text, parses, heads, lang):
+			if min_non_pronoun(split[0], text, parses, heads, lang) is None and min(split[0]) != min(split[1]):
 				continue
 			found = False
 			for remove in changes['remove']:
@@ -560,8 +567,8 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 			changes['remove'].remove(remove)
 	to_remove = []
 	for merge in changes['merge']:
-		if min_non_pronoun(merge[0], text, parses, heads) == min_non_pronoun(merge[1], text, parses, heads):
-			if min_non_pronoun(merge[0], text, parses, heads) is None and min(merge[0]) != min(merge[1]):
+		if min_non_pronoun(merge[0], text, parses, heads, lang) == min_non_pronoun(merge[1], text, parses, heads, lang):
+			if min_non_pronoun(merge[0], text, parses, heads, lang) is None and min(merge[0]) != min(merge[1]):
 				continue
 			found = False
 			for introduce in changes['introduce']:
@@ -591,7 +598,7 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 				break
 		if to_remove is not None:
 			changes['remove'].remove(to_remove)
-		properties = ['extra'] + mention_error_properties(iter(split[0]).next(), split[1], text, parses, heads, gold_doc)
+		properties = ['extra'] + mention_error_properties(iter(split[0]).next(), split[1], text, parses, heads, gold_doc, lang)
 		changes['extra mention'].append((split[0], split, properties))
 
 	# Pair up introduces and merges to form incorrectly non-referential
@@ -608,8 +615,8 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 						break
 			if not elsewhere:
 				mention = list(merge[0])[0]
-				if mention != min_non_pronoun(merge[1], text, parses, heads) and mention not in auto_mentions:
-					properties = ['missing'] + mention_error_properties(mention, merge[1], text, parses, heads, gold_doc)
+				if mention != min_non_pronoun(merge[1], text, parses, heads, lang) and mention not in auto_mentions:
+					properties = ['missing'] + mention_error_properties(mention, merge[1], text, parses, heads, gold_doc, lang)
 					changes['missing mention'].append(({mention}, merge[1], merge, properties))
 					for introduce in changes['introduce']:
 						if len(introduce[0]) == 1 and mention in introduce[0]:
@@ -621,14 +628,14 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set, auto_
 
 	return changes
 
-def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gold_clusters, gold_mentions, gold_doc, auto_clusters):
+def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text, parses, heads, gold_clusters, gold_mentions, gold_doc, auto_clusters, lang):
 	# Cataphora
 	mentions = defaultdict(lambda: [None, None, None])
 
 	for cluster in gold:
-		non_pronoun = min_non_pronoun(cluster, text, parses, heads)
+		non_pronoun = min_non_pronoun(cluster, text, parses, heads, lang)
 		for mention in cluster:
-			mtype = coreference.mention_type(mention, text, parses, heads)
+			mtype = coreference.mention_type(mention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				if non_pronoun is not None and mention < non_pronoun:
 					mentions[mention][0] = True
@@ -636,9 +643,9 @@ def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text
 					mentions[mention][0] = False
 
 	for cluster in auto:
-		non_pronoun = min_non_pronoun(cluster, text, parses, heads)
+		non_pronoun = min_non_pronoun(cluster, text, parses, heads, lang)
 		for mention in cluster:
-			mtype = coreference.mention_type(mention, text, parses, heads)
+			mtype = coreference.mention_type(mention, text, parses, heads, lang)
 			if mtype == 'pronoun':
 				if non_pronoun is not None and mention < non_pronoun:
 					mentions[mention][1] = True
@@ -652,8 +659,8 @@ def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text
 	for mention in in_both:
 		acluster = auto_clusters[auto_mentions[mention]]
 		gcluster = gold_clusters[gold_mentions[mention]]
-		anon_pronoun = min_non_pronoun(acluster, text, parses, heads)
-		gnon_pronoun = min_non_pronoun(gcluster, text, parses, heads)
+		anon_pronoun = min_non_pronoun(acluster, text, parses, heads, lang)
+		gnon_pronoun = min_non_pronoun(gcluster, text, parses, heads, lang)
 		if anon_pronoun == gnon_pronoun:
 			mentions[mention][2] = True
 		else:
@@ -663,7 +670,7 @@ def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text
 		mtext = coreference_rendering.mention_text(text, mention).lower()
 		print >> out['out'], "Cataphoric properties", mentions[mention], mtext
 
-def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_singletons=True):
+def process_document(doc_name, part_name, gold_doc, auto_doc, out, lang, remove_singletons=True):
 	for ofile in [out['out'], out['short out']]:
 		print >> ofile
 		print >> ofile, '-' * 79
@@ -742,7 +749,7 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 
 	groups = coreference.confusion_groups(gold_mentions, auto_mentions, gold_clusters, auto_clusters)
 	for auto, gold in groups:
-###		print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text, gold_parses, gold_heads, gold_clusters, gold_mentions, gold_doc, auto_clusters)
+###		print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set, text, gold_parses, gold_heads, gold_clusters, gold_mentions, gold_doc, auto_clusters, lang)
 
 		if nlp_eval.coreference_cluster_match(gold, auto):
 			continue
@@ -754,7 +761,7 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 		colours2 = coreference_rendering.print_cluster_error_group([auto, gold], out['short out'], text, gold_parses, gold_heads, gold_mentions)
 
 		# Work out the errors
-		changes = repair(auto, gold, auto_mentions, gold_mention_set, text, gold_parses, gold_heads, gold_clusters, gold_mentions, gold_doc)
+		changes = repair(auto, gold, auto_mentions, gold_mention_set, text, gold_parses, gold_heads, gold_clusters, gold_mentions, gold_doc, lang)
 		print >> out['out'], "\nRaw changes:"
 		for name in changes:
 			print >> out['out'], name, len(changes[name])
@@ -762,7 +769,7 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 				errors.append(('raw ' + name, change))
 
 		# Categorise
-		changes = categorise(auto, gold, changes, text, gold_parses, gold_heads, gold_mention_set, auto_mentions, gold_doc)
+		changes = categorise(auto, gold, changes, text, gold_parses, gold_heads, gold_mention_set, auto_mentions, gold_doc, lang)
 
 		# Apply updates to corrected sets
 		if 'split' in changes:
@@ -808,7 +815,7 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 		if 'merge' in changes:
 			for change in changes['merge']:
 				for cauto_mentions in [auto_mentions_merge, auto_mentions_merge_prog, auto_mentions_missing_mention_prog, auto_mentions_missing_entity_prog]:
-					non_pronoun = min_non_pronoun(change[1], text, gold_parses, gold_heads)
+					non_pronoun = min_non_pronoun(change[1], text, gold_parses, gold_heads, lang)
 					if non_pronoun is None:
 						non_pronoun = min(change[1])
 					if non_pronoun not in cauto_mentions:
@@ -860,7 +867,8 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 			'extra entity': 'Extra Entity',
 			'merge': 'Divided Entity',
 			'missing mention': 'Missing Mention',
-			'missing entity': 'Missing Entity'
+			'missing entity': 'Missing Entity',
+			'introduce': 'Introduced Mention',
 		}
 		for name in changes:
 			if len(changes[name]) > 0:
@@ -883,7 +891,7 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 						coreference_rendering.print_mention(out['out'], False, gold_parses, gold_heads, text, mention, extra=True)
 				print >> out['out'], name, change
 				print >> out['out'], "Properties included:", name, change[-1]
-				print >> out['properties'], [name] + change[-1]
+				print >> out['properties'], [name] + list(change[-1])
 				errors.append((name, change))
 		print >> out['out']
 		print >> out['out'], '-' * 79
@@ -906,32 +914,40 @@ def process_document(doc_name, part_name, gold_doc, auto_doc, out, remove_single
 	return errors
 
 
-if __name__ == '__main__':
+def main():
 	# Process params
-	init.argcheck(sys.argv, 4, 5, "Print coreference resolution errors", "<output_prefix> <gold_dir> <test_file> [remove singletons? T | F (default is True)]")
-	remove_singletons = True
-	if len(sys.argv) == 5 and sys.argv[-1] == 'F':
-		remove_singletons = False
+	try:
+		opts, args = getopt.gnu_getopt(
+				sys.argv[1:], '', ['keepsingletons', 'lang='])
+		output_prefix, gold_dir, test_file = args
+	except (getopt.GetoptError, ValueError):
+		print('Print coreference resolution errors')
+		print('./%s <prefix> <gold_dir> <test_file> '
+				'[--keepsingletons] [--lang=<en|nl>]' % sys.argv[0])
+		return
+	opts = dict(opts)
+	remove_singletons = '--keepsingletons' not in opts
+	lang = opts.get('--lang', 'en')
 	out = {
-		'out': open(sys.argv[1] + '.classified.detailed', 'w'),
-		'properties': open(sys.argv[1] + '.classified.properties', 'w'),
-		'short out': open(sys.argv[1] + '.classified', 'w'),
-		'summary': open(sys.argv[1] + '.summary', 'w'),
-		'system output': open(sys.argv[1] + '.system', 'w'),
-		'gold': open(sys.argv[1] + '.gold', 'w'),
-		'error: original': open(sys.argv[1] + '.corrected.none', 'w'),
-		'error: span mismatch': open(sys.argv[1] + '.corrected.span_errors', 'w'),
-		'error: split': open(sys.argv[1] + '.corrected.confused_entities', 'w'),
-		'error: extra mention': open(sys.argv[1] + '.corrected.extra_mention', 'w'),
-		'error: extra entity': open(sys.argv[1] + '.corrected.extra_entity', 'w'),
-		'error: merge': open(sys.argv[1] + '.corrected.divided', 'w'),
-		'error: missing mention': open(sys.argv[1] + '.corrected.missing_mention', 'w'),
-		'error: missing entity': open(sys.argv[1] + '.corrected.missing_entity', 'w'),
-		'error: extra mention prog': open(sys.argv[1] + '.corrected.extra_mention_prog', 'w'),
-		'error: extra entity prog': open(sys.argv[1] + '.corrected.extra_entity_prog', 'w'),
-		'error: merge prog': open(sys.argv[1] + '.corrected.divided_prog', 'w'),
-		'error: missing mention prog': open(sys.argv[1] + '.corrected.missing_mention_prog', 'w'),
-		'error: missing entity prog': open(sys.argv[1] + '.corrected.missing_entity_prog', 'w')
+		'out': open(output_prefix + '.classified.detailed', 'w'),
+		'properties': open(output_prefix + '.classified.properties', 'w'),
+		'short out': open(output_prefix + '.classified', 'w'),
+		'summary': open(output_prefix + '.summary', 'w'),
+		'system output': open(output_prefix + '.system', 'w'),
+		'gold': open(output_prefix + '.gold', 'w'),
+		'error: original': open(output_prefix + '.corrected.none', 'w'),
+		'error: span mismatch': open(output_prefix + '.corrected.span_errors', 'w'),
+		'error: split': open(output_prefix + '.corrected.confused_entities', 'w'),
+		'error: extra mention': open(output_prefix + '.corrected.extra_mention', 'w'),
+		'error: extra entity': open(output_prefix + '.corrected.extra_entity', 'w'),
+		'error: merge': open(output_prefix + '.corrected.divided', 'w'),
+		'error: missing mention': open(output_prefix + '.corrected.missing_mention', 'w'),
+		'error: missing entity': open(output_prefix + '.corrected.missing_entity', 'w'),
+		'error: extra mention prog': open(output_prefix + '.corrected.extra_mention_prog', 'w'),
+		'error: extra entity prog': open(output_prefix + '.corrected.extra_entity_prog', 'w'),
+		'error: merge prog': open(output_prefix + '.corrected.divided_prog', 'w'),
+		'error: missing mention prog': open(output_prefix + '.corrected.missing_mention_prog', 'w'),
+		'error: missing entity prog': open(output_prefix + '.corrected.missing_entity_prog', 'w')
 	}
 
 	# Header info
@@ -955,7 +971,7 @@ if __name__ == '__main__':
 #   Nodes spanning missing text to right
 #
 # missing and extra entity
-#   Missing or extra 
+#   Missing or extra
 #   Size
 #   Number of proper names
 #   Number of nominals
@@ -1014,8 +1030,8 @@ if __name__ == '__main__':
 '''
 
 	# Read input
-	auto = coreference_reading.read_conll_coref_system_output(sys.argv[3])
-	gold = coreference_reading.read_conll_matching_files(auto, sys.argv[2])
+	auto = coreference_reading.read_conll_coref_system_output(test_file)
+	gold = coreference_reading.read_conll_matching_files(auto, gold_dir, lang)
 
 	# Define an order
 	order = []
@@ -1031,7 +1047,7 @@ if __name__ == '__main__':
 			print >> sys.stderr, doc, part, "not in gold"
 		if 'text' not in auto[doc][part]:
 			auto[doc][part]['text'] = gold[doc][part]['text']
-		errors = process_document(doc, part, gold[doc][part], auto[doc][part], out, remove_singletons)
+		errors = process_document(doc, part, gold[doc][part], auto[doc][part], out, lang, remove_singletons)
 		for error in errors:
 			counts[error[0]].append(error)
 
@@ -1063,3 +1079,7 @@ if __name__ == '__main__':
 
 	for name in out:
 		out[name].close()
+
+
+if __name__ == '__main__':
+	main()

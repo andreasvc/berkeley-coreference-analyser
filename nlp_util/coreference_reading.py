@@ -442,7 +442,7 @@ def read_reconcile_coref(filename, gold_text):
 		text.pop()
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
-def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rclusters=True, rner=True):
+def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rclusters=True, rner=True, lang=None):
 	# Read entire file, inserting into a dictionary:
 	#  key - the #begin <blah> info
 	#  value - a dict, one entry per part, each entry contains:
@@ -473,7 +473,10 @@ def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rc
 					if rparses:
 						info['parses'] = read_conll_parses(cur)
 						if rheads:
-							info['heads'] = [head_finder.collins_find_heads(parse) for parse in info['parses']]
+							info['heads'] = [
+									head_finder.collins_find_heads(
+										parse, lang=lang)
+									for parse in info['parses']]
 					if rclusters:
 						info['mentions'], info['clusters'] = read_conll_coref(cur)
 					if rner:
@@ -495,25 +498,25 @@ def read_conll_gold_files(dir_prefix):
 def read_conll_coref_system_output(filename, ans=None):
 	return read_conll_doc(filename, ans, False, False, False, True)
 
-def read_conll_matching_file(dir_prefix, filename, ans=None):
+def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if ans is None:
 		ans = defaultdict(lambda: {})
 	query = os.path.join(dir_prefix, filename + '*gold*conll')
 	filenames = glob.glob(query)
 	if len(filenames) == 1:
-		read_conll_doc(filenames[0], ans)
+		read_conll_doc(filenames[0], ans, lang=lang)
 	else:
 		print >> sys.stderr, "Reading matching doc failed for %s/%s as %d files were found." % (dir_prefix, filename, len(filenames))
 	return ans
 
-def read_conll_matching_files(conll_docs, dir_prefix):
+def read_conll_matching_files(conll_docs, dir_prefix, lang=None):
 	# Read the corresponding file under dir_prefix
 	ans = None
 	for filename in conll_docs:
 		if "tc/ch/00/ch" in filename and '9' not in filename:
 			val = int(filename.split('_')[-1]) * 10 - 1
 			filename = "tc/ch/00/ch_%04d" % val
-		ans = read_conll_matching_file(dir_prefix, filename, ans)
+		ans = read_conll_matching_file(dir_prefix, filename, ans, lang=lang)
 	return ans
 
 def read_conll_all(dir_prefix, suffix="auto_conll"):

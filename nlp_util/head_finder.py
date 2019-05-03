@@ -3,8 +3,8 @@
 # vim: set ts=2 sw=2 noet:
 
 import sys
+import re
 
-#TODO: Handle other langauges
 
 collins_mapping_table = {
   'ADJP': ('right', ['NNS', 'QP', 'NN', '$', 'ADVP', 'JJ', 'VBN', 'VBG', 'ADJP', 'JJR', 'NP', 'JJS', 'DT', 'FW', 'RBR', 'RBS', 'SBAR', 'RB']),
@@ -35,6 +35,83 @@ collins_mapping_table = {
   'X': ('right', ['NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP', 'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW']),
   'META': ('right', [])
 }
+
+# Head rules for the Alpino treebank.
+# NB: Two types of POS tags are included:
+# 1. "pos" attribute
+# 2. "pt" attribute or "postag" attribute without features.
+# Multiple rules may be given for the same label, these are applied
+# consecutively.
+alpino_headrules = {
+		'ADVP': [('right', ['ADV', 'BW', 'MWU', 'ADJ', 'ADJ'])],
+		'AHI': [('right', ['INF', 'MWU'])],
+		'AP': [('right', ['ADJ', 'ADJ', 'MWU'])],
+		'CONJ': [
+			('left', ['VG', 'NP', 'SMAIN', 'NOUN', 'N', 'PP', 'ADJ', 'ADJ',
+				'SSUB', 'MWU', 'NUM', 'AP', 'PPART', 'DU', 'SV1', 'TI']),
+			('left', ['INF', 'CP', 'CONJ', 'REL', 'ADV', 'BW', 'DETP', 'VERB',
+				'WW', 'WHSUB', 'PPRES', 'ADVP', 'OTI', 'DET', 'VNW', 'LID',
+				'WHQ', 'WHREL'])],
+		'CP': [
+			('left', ['COMP', 'VG', 'SSUB', 'NP', 'COMPARATIVE', 'NOUN', 'N',
+				'CONJ', 'TI', 'ADV', 'BW', 'PP', 'MWU', 'ADJ', 'ADJ', 'SV1',
+				'CP']),
+			('left', ['NUM', 'DU', 'VERB', 'WW', 'ADVP', 'PPART', 'AP'])],
+		'DETP': [('right', ['NUM', 'DET', 'VNW', 'LID', 'MWU'])],
+		'DU': [
+			('right', ['SMAIN', 'COMP', 'VG', 'NP', 'PP', 'SV1', 'DU', 'ADV',
+				'BW', 'CONJ', 'NOUN', 'N', 'CP', 'MWU', 'ADJ', 'ADJ', 'NUM',
+				'SSUB']),
+			('right', ['TAG', 'AP', 'ADVP', 'WHQ', 'WHREL', 'OTI', 'PPART',
+				'VERB', 'WW', 'VG', 'INF', 'DET', 'VNW', 'LID', 'TI'])],
+		'INF': [
+			('right', ['VERB', 'WW']),
+			('right', ['PP', 'NP', 'ADV', 'BW', 'ADJ', 'ADJ', 'NOUN', 'N'])],
+		'MWU': [
+			('right', ['NOUN', 'N', 'PREP', 'VZ', 'FIXED', 'ADV', 'BW', 'ADJ',
+				'ADJ', 'NUM', 'DET', 'VNW', 'LID', 'COMP', 'VG', 'VG', 'PP',
+				'COMP', 'VG', 'TAG']),
+			('right', ['PART', 'VZ', 'VERB', 'WW', 'LET', 'PUNCT', 'NAME',
+				'SPEC'])],
+		'NP': [
+			('right', ['NOUN', 'N', 'MWU', 'NUM', 'ADJ', 'ADJ', 'DET', 'VNW',
+				'LID', 'VERB', 'WW', 'ADV', 'BW']),
+			('right', ['DET', 'VNW', 'LID', 'ADJ', 'ADJ', 'ADV', 'BW', 'AP',
+				'PP', 'NUM'])],
+		'OTI': [('right', ['COMP', 'VG', 'TI', 'CONJ', 'ADV', 'BW'])],
+		'PP': [
+			('left', ['PREP', 'VZ', 'MWU', 'PP']),
+			('left', ['PP', 'NP', 'NOUN', 'N'])],
+		'PPART': [
+			('right', ['VERB', 'WW', 'ADJ', 'ADJ']),
+			('right', ['PP', 'NP', 'NUM'])],
+		'PPRES': [('right', ['ADJ', 'ADJ'])],
+		'REL': [('right', ['NOUN', 'N', 'PP', 'ADV', 'BW', 'NP', 'MWU'])],
+		'ROOT': [('right', ['LET', 'PUNCT', 'SMAIN'])],
+		'SMAIN': [
+			('left', ['VERB', 'WW']),
+			('left', ['NP', 'PP', 'ADV', 'BW', 'PPART', 'MWU', 'NOUN', 'N',
+				'NUM', 'AP', 'INF', 'CONJ', 'CP', 'PPRES', 'ADVP', 'TI']),
+			('left', ['ADJ', 'ADJ', 'PREP', 'VZ'])],
+		'SSUB': [
+			('right', ['VERB', 'WW']),
+			('right', ['NP', 'PPART', 'ADV', 'BW', 'NOUN', 'N', 'PP', 'CONJ',
+				'ADVP'])],
+		'SV1': [('left', ['VERB', 'WW'])],
+		'SVAN': [('right', ['ADV', 'BW', 'COMP', 'VG'])],
+		'TI': [('right', ['COMP', 'VG', 'INF', 'VERB', 'WW'])],
+		'TOP': [('right', ['LET', 'PUNCT', 'SMAIN'])],
+		'WHQ': [('right', ['NOUN', 'N', 'ADV', 'BW', 'PP', 'NP', 'AP'])],
+		'WHREL': [('right', ['NOUN', 'N', 'PP', 'ADV', 'BW', 'AP'])],
+		'WHSUB': [('right', ['ADV', 'BW', 'NOUN', 'N', 'PP', 'NP', 'AP', 'ADJ',
+			'ADJ'])]}
+
+headrules = {'en': {}}
+# Wrap rule in list to support multiple rules per label.
+for label, rule in collins_mapping_table.items():
+	headrules['en'][label] = [rule]
+headrules['nl'] = alpino_headrules
+
 
 def add_head(head_map, tree, head):
 	tree_repr = (tree.span, tree.label)
@@ -86,11 +163,14 @@ def collins_NP(tree, head_map):
 		return
 	add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
 
-def collins_find_heads(tree, head_map=None):
+def collins_find_heads(tree, head_map=None, lang=None):
 	if head_map is None:
 		head_map = {}
+	if lang is None:
+		lang = 'en'
+	mapping_table = headrules[lang]
 	for subtree in tree.subtrees:
-		collins_find_heads(subtree, head_map)
+		collins_find_heads(subtree, head_map, lang)
 
 	# A word is it's own head
 	if tree.word is not None:
@@ -100,7 +180,7 @@ def collins_find_heads(tree, head_map=None):
 
 	# If the label for this node is not in the table we are either at the bottom,
 	# at an NP, or have an error
-	if tree.label not in collins_mapping_table:
+	if tree.label not in mapping_table:
 		if tree.label in ['NP', 'NML']:
 			collins_NP(tree, head_map)
 		else:
@@ -111,16 +191,22 @@ def collins_find_heads(tree, head_map=None):
 			add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
 		return head_map
 
-	# Look through and take the first/last occurrence that matches
-	info = collins_mapping_table[tree.label]
-	for label in info[1]:
-		for i in xrange(len(tree.subtrees)):
-			if info[0] == 'right':
-				i = len(tree.subtrees) - i - 1
-			subtree = tree.subtrees[i]
-			if subtree.label == label or get_head(head_map, subtree)[2] == label:
-				add_head(head_map, tree, get_head(head_map, subtree))
-				return head_map
+	rules = mapping_table[tree.label.upper()]
+	# Try each rule for this label, until one matches
+	for info in rules:
+		# Look through and take the first/last occurrence that matches
+		for label in info[1]:
+			for i in xrange(len(tree.subtrees)):
+				if info[0] == 'right':
+					i = len(tree.subtrees) - i - 1
+				subtree = tree.subtrees[i]
+				# Split label on square brackets because the Dutch POS tags
+				# contain extra morphological features which are not part of
+				# the head rules: N[soort,mv,basis] => N
+				if (subtree.label.upper().split('[')[0] == label
+						or get_head(head_map, subtree)[2].split('[')[0] == label):
+					add_head(head_map, tree, get_head(head_map, subtree))
+					return head_map
 
 	# Final fallback
 	if info[0] == 'left':
