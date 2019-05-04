@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+from __future__ import print_function, absolute_import
 import sys
 import string
 import getopt
@@ -45,13 +46,14 @@ def match_boundaries(gold_mention_set, auto_mention_set, auto_mentions,
 		while (astart < aend - 1
 				and (text[sentence][astart] == "the"
 					or (len(text[sentence][astart]) == 1
-						and text[sentence][astart][0] not in string.letters))):
+						and text[sentence][astart][0]
+							not in string.ascii_letters))):
 			astart += 1
 		while (astart < aend - 1
 				and (text[sentence][aend - 1] == "'s"
 					or (len(text[sentence][aend - 1]) == 1
 						and text[sentence][aend - 1][0]
-							not in string.letters))):
+							not in string.ascii_letters))):
 			aend -= 1
 		for gmention in unique_to_gold:
 			if gmention in used_gold:
@@ -63,13 +65,13 @@ def match_boundaries(gold_mention_set, auto_mention_set, auto_mentions,
 					and (text[sentence][gstart] == "the"
 						or (len(text[sentence][gstart]) == 1
 							and text[sentence][gstart][0]
-								not in string.letters))):
+								not in string.ascii_letters))):
 				gstart += 1
 			while (gstart < gend - 1
 					and (text[sentence][gend - 1] == "'s"
 						or (len(text[sentence][gend - 1]) == 1
 							and text[sentence][gend - 1][0]
-								not in string.letters))):
+								not in string.ascii_letters))):
 				gend -= 1
 			if astart == gstart and aend == gend:
 				mapping[amention] = gmention
@@ -187,7 +189,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads,
 	# If size 1, what the text is
 	mtext = None
 	if len(part) == 1:
-		mention = iter(part).next()
+		mention = next(iter(part))
 		mtext = '_'.join(
 				coreference_rendering.mention_text(text,
 				mention).lower().split())
@@ -286,7 +288,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads,
 	ans.append(match_present)  # 12
 
 	# What has happened, or will happen
-	example = iter(part).next()
+	example = next(iter(part))
 	action = 'nothing'
 	if example not in gold_mentions:
 		action = 'delete'
@@ -308,7 +310,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads,
 	# NER, number, person, gender
 	cproperties = get_cluster_info(rest, gold_doc, lang)
 	pproperties = get_cluster_info(part, gold_doc, lang)
-	for prop in xrange(4):
+	for prop in range(4):
 		ans.append(cproperties[prop] == pproperties[prop])
 		cprop = list(cproperties[prop])
 		cprop.sort()
@@ -385,7 +387,7 @@ def mention_error_properties(mention, cluster, text, parses, heads, gold_doc,
 	cluster_properties = get_cluster_info(rest, gold_doc, lang)
 	mention_properties = get_cluster_info({mention}, gold_doc, lang)
 	words = ['ner', 'number', 'person', 'gender']
-	for i in xrange(4):
+	for i in range(4):
 		if len(mention_properties[i]) == 0 or len(cluster_properties[i]) == 0:
 			ans.append(words[i] + '_unknown')
 		elif len(mention_properties[i].intersection(
@@ -574,7 +576,7 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set,
 			changes['split'].remove(split)
 			to_remove = None
 			for remove in changes['remove']:
-				if iter(split[0]).next() in remove[0]:
+				if next(iter(split[0])) in remove[0]:
 					to_remove = remove
 					break
 			if to_remove is not None:
@@ -671,13 +673,13 @@ def categorise(auto, gold, changes, text, parses, heads, gold_mention_set,
 		changes['split'].remove(split)
 		to_remove = None
 		for remove in changes['remove']:
-			if iter(split[0]).next() in remove[0]:
+			if next(iter(split[0])) in remove[0]:
 				to_remove = remove
 				break
 		if to_remove is not None:
 			changes['remove'].remove(to_remove)
 		properties = ['extra'] + mention_error_properties(
-				iter(split[0]).next(), split[1], text, parses, heads, gold_doc,
+				next(iter(split[0])), split[1], text, parses, heads, gold_doc,
 				lang)
 		changes['extra mention'].append((split[0], split, properties))
 
@@ -758,7 +760,7 @@ def print_pre_change_info(out, auto, gold, auto_mentions, gold_mention_set,
 
 	for mention in mentions:
 		mtext = coreference_rendering.mention_text(text, mention).lower()
-		print >> out['out'], "Cataphoric properties", mentions[mention], mtext
+		print("Cataphoric properties", mentions[mention], mtext, file=out['out'])
 
 
 def process_document(doc_name,
@@ -769,11 +771,11 @@ def process_document(doc_name,
 		lang,
 		remove_singletons=True):
 	for ofile in [out['out'], out['short out']]:
-		print >> ofile
-		print >> ofile, '-' * 79
-		print >> ofile, doc_name, part_name
-		print >> ofile, '-' * 79
-		print >> ofile
+		print(file=ofile)
+		print('-' * 79, file=ofile)
+		print(doc_name, part_name, file=ofile)
+		print('-' * 79, file=ofile)
+		print(file=ofile)
 	text = gold_doc['text']
 
 	gold_parses = gold_doc['parses']
@@ -815,10 +817,10 @@ def process_document(doc_name,
 			auto_mentions, auto_clusters, text,
 			gold_parses, gold_heads)
 	if len(span_errors) == 0:
-		print >> out['out'], "No",
-		print >> out['short out'], "No",
-	print >> out['out'], "Span Errors: (system, gold)"
-	print >> out['short out'], "Span Errors: (system, gold)"
+		print("No", end=' ', file=out['out'])
+		print("No", end=' ', file=out['short out'])
+	print("Span Errors: (system, gold)", file=out['out'])
+	print("Span Errors: (system, gold)", file=out['short out'])
 	for error in span_errors:
 		errors.append(('span mismatch', error))
 		before = coreference_rendering.print_mention(None,
@@ -835,17 +837,17 @@ def process_document(doc_name,
 				text,
 				error[1],
 				return_str=True)
-		print >> out['out'], '{:<50}    {:<50}'.format(before, after)
-		print >> out['short out'], '{:<50}    {:<50}'.format(before, after)
-	print >> out['out']
-	print >> out['short out']
+		print('{:<50}    {:<50}'.format(before, after), file=out['out'])
+		print('{:<50}    {:<50}'.format(before, after), file=out['short out'])
+	print(file=out['out'])
+	print(file=out['short out'])
 	for error in errors:
-		print >> out['out'], 'span mismatch', error
-		print >> out['properties'], ['span error'] + list(error[1])
-	print >> out['out']
-	print >> out['out'], '-' * 79
-	print >> out['short out']
-	print >> out['short out'], '-' * 79
+		print('span mismatch', error, file=out['out'])
+		print(['span error'] + list(error[1]), file=out['properties'])
+	print(file=out['out'])
+	print('-' * 79, file=out['out'])
+	print(file=out['short out'])
+	print('-' * 79, file=out['short out'])
 
 	coreference_rendering.print_conll_style_part(out['error: span mismatch'],
 			text, auto_mentions, doc_name,
@@ -879,8 +881,8 @@ def process_document(doc_name,
 			continue
 
 		# Print clusters with errors shown
-		print >> out['out']
-		print >> out['short out']
+		print(file=out['out'])
+		print(file=out['short out'])
 		colours = coreference_rendering.print_cluster_error_group(
 				[auto, gold], out['out'], text, gold_parses, gold_heads,
 				gold_mentions)
@@ -892,9 +894,9 @@ def process_document(doc_name,
 		changes = repair(auto, gold, auto_mentions, gold_mention_set, text,
 				gold_parses, gold_heads, gold_clusters, gold_mentions,
 				gold_doc, lang)
-		print >> out['out'], "\nRaw changes:"
+		print("\nRaw changes:", file=out['out'])
 		for name in changes:
-			print >> out['out'], name, len(changes[name])
+			print(name, len(changes[name]), file=out['out'])
 			for change in changes[name]:
 				errors.append(('raw ' + name, change))
 
@@ -916,7 +918,7 @@ def process_document(doc_name,
 					auto_mentions_missing_entity_prog[mention] = max_cluster
 				rest = change[1].difference(change[0])
 				if len(rest) == 1:
-					rest = iter(rest).next()
+					rest = next(iter(rest))
 					if rest not in gold_mentions:
 						auto_mentions_split.pop(rest)
 						auto_mentions_extra_mention_prog.pop(rest)
@@ -982,7 +984,7 @@ def process_document(doc_name,
 						if mention in cauto_mentions:
 							if min_in_goal is None or min_in_goal > mention:
 								min_in_goal = mention
-					mention = iter(change[0]).next()
+					mention = next(iter(change[0]))
 					if min_in_goal is not None:
 						cauto_mentions[mention] = cauto_mentions[min_in_goal]
 					else:
@@ -999,8 +1001,8 @@ def process_document(doc_name,
 					auto_mentions_missing_entity_prog[mention] = max_cluster
 
 		# Aggregate and count errors
-		print >> out['out'], "\nCategorised:"
-		print >> out['short out'], "\nErrors:"
+		print("\nCategorised:", file=out['out'])
+		print("\nErrors:", file=out['short out'])
 		rename = {
 				'span mismatch': "Span Error", 'split': 'Conflated Entities',
 				'extra mention': 'Extra Mention', 'extra entity':
@@ -1010,16 +1012,16 @@ def process_document(doc_name,
 		}
 		for name in changes:
 			if len(changes[name]) > 0:
-				print >> out['out'], len(changes[name]), rename[name]
-				print >> out['short out'], len(changes[name]), rename[name]
-		print >> out['out'], '\nDetailed error listing:'
+				print(len(changes[name]), rename[name], file=out['out'])
+				print(len(changes[name]), rename[name], file=out['short out'])
+		print('\nDetailed error listing:', file=out['out'])
 		for name in changes:
 			for change in changes[name]:
 				mention = None
 				if len(change[0]) == 1:
 					mention = change[0].copy().pop()
 				if mention is not None:
-					print >> out['out'], name,
+					print(name, end=' ', file=out['out'])
 					if mention in gold_mentions:
 						colour = 15
 						if gold_mentions[mention] in colours:
@@ -1035,14 +1037,14 @@ def process_document(doc_name,
 								text,
 								mention,
 								extra=True)
-				print >> out['out'], name, change
-				print >> out['out'], "Properties included:", name, change[-1]
-				print >> out['properties'], [name] + list(change[-1])
+				print(name, change, file=out['out'])
+				print("Properties included:", name, change[-1], file=out['out'])
+				print([name] + list(change[-1]), file=out['properties'])
 				errors.append((name, change))
-		print >> out['out']
-		print >> out['out'], '-' * 79
-		print >> out['short out']
-		print >> out['short out'], '-' * 79
+		print(file=out['out'])
+		print('-' * 79, file=out['out'])
+		print(file=out['short out'])
+		print('-' * 79, file=out['short out'])
 
 	# Print corrected output
 	coreference_rendering.print_conll_style_part(out['error: split'], text,
@@ -1094,53 +1096,54 @@ def main():
 		output_prefix, gold_dir, test_file = args
 	except (getopt.GetoptError, ValueError):
 		print('Print coreference resolution errors')
-		print('./%s <prefix> <gold_dir> <test_file> '
-				'[--keepsingletons] [--lang=<en|nl>]' % sys.argv[0])
+		print(('./%s <prefix> <gold_dir> <test_file> '
+				'[--keepsingletons] [--lang=<en|nl>]' % sys.argv[0]))
 		return
 	opts = dict(opts)
 	remove_singletons = '--keepsingletons' not in opts
 	lang = opts.get('--lang', 'en')
+	# yapf: disable
 	out = {
-			'out':
-			open(output_prefix + '.classified.detailed', 'w'), 'properties':
-			open(output_prefix + '.classified.properties', 'w'), 'short out':
-			open(output_prefix + '.classified', 'w'), 'summary':
-			open(output_prefix + '.summary', 'w'), 'system output':
-			open(output_prefix + '.system', 'w'), 'gold':
-			open(output_prefix + '.gold', 'w'), 'error: original':
-			open(output_prefix + '.corrected.none',
-			'w'), 'error: span mismatch':
-			open(output_prefix + '.corrected.span_errors',
-			'w'), 'error: split':
-			open(output_prefix + '.corrected.confused_entities',
-			'w'), 'error: extra mention':
-			open(output_prefix + '.corrected.extra_mention',
-			'w'), 'error: extra entity':
-			open(output_prefix + '.corrected.extra_entity',
-			'w'), 'error: merge':
-			open(output_prefix + '.corrected.divided',
-			'w'), 'error: missing mention':
-			open(output_prefix + '.corrected.missing_mention',
-			'w'), 'error: missing entity':
-			open(output_prefix + '.corrected.missing_entity',
-			'w'), 'error: extra mention prog':
-			open(output_prefix + '.corrected.extra_mention_prog',
-			'w'), 'error: extra entity prog':
-			open(output_prefix + '.corrected.extra_entity_prog',
-			'w'), 'error: merge prog':
-			open(output_prefix + '.corrected.divided_prog',
-			'w'), 'error: missing mention prog':
-			open(output_prefix + '.corrected.missing_mention_prog', 'w'),
+			'out': open(output_prefix + '.classified.detailed', 'w'),
+			'properties': open(output_prefix + '.classified.properties', 'w'),
+			'short out': open(output_prefix + '.classified', 'w'),
+			'summary': open(output_prefix + '.summary', 'w'),
+			'system output': open(output_prefix + '.system', 'w'),
+			'gold': open(output_prefix + '.gold', 'w'),
+			'error: original': open(output_prefix + '.corrected.none', 'w'),
+			'error: span mismatch':
+				open(output_prefix + '.corrected.span_errors', 'w'),
+			'error: split':
+				open(output_prefix + '.corrected.confused_entities', 'w'),
+			'error: extra mention':
+				open(output_prefix + '.corrected.extra_mention', 'w'),
+			'error: extra entity':
+				open(output_prefix + '.corrected.extra_entity', 'w'),
+			'error: merge':
+				open(output_prefix + '.corrected.divided', 'w'),
+			'error: missing mention':
+				open(output_prefix + '.corrected.missing_mention', 'w'),
+			'error: missing entity':
+				open(output_prefix + '.corrected.missing_entity', 'w'),
+			'error: extra mention prog':
+				open(output_prefix + '.corrected.extra_mention_prog', 'w'),
+			'error: extra entity prog':
+				open(output_prefix + '.corrected.extra_entity_prog', 'w'),
+			'error: merge prog':
+				open(output_prefix + '.corrected.divided_prog', 'w'),
+			'error: missing mention prog':
+				open(output_prefix + '.corrected.missing_mention_prog', 'w'),
 			'error: missing entity prog':
-			open(output_prefix + '.corrected.missing_entity_prog', 'w')
+				open(output_prefix + '.corrected.missing_entity_prog', 'w')
 	}
+	# yapf: enable
 
 	# Header info
 	init.header(sys.argv, out['out'])
 	init.header(sys.argv, out['short out'])
 	init.header(sys.argv, out['properties'])
 	init.header(sys.argv, out['summary'])
-	print >> out['properties'], '''# Each line below describes a single error.
+	print('''# Each line below describes a single error.
 # The fields included for the seven error types are:
 # span mismatch
 #   System span (sentence, start, end)
@@ -1212,7 +1215,7 @@ def main():
 #   Person type(s) of part and rest match
 #   Person types of the part
 #   Person types of the rest
-'''
+''', file=out['properties'])
 
 	# Read input
 	auto = coreference_reading.read_conll_coref_system_output(test_file)
@@ -1229,7 +1232,7 @@ def main():
 	counts = defaultdict(lambda: [])
 	for doc, part in order:
 		if doc not in gold or part not in gold[doc]:
-			print >> sys.stderr, doc, part, "not in gold"
+			print(doc, part, "not in gold", file=sys.stderr)
 		if 'text' not in auto[doc][part]:
 			auto[doc][part]['text'] = gold[doc][part]['text']
 		errors = process_document(doc, part, gold[doc][part], auto[doc][part],
@@ -1252,9 +1255,9 @@ def main():
 			('missing entity', 'Missing Entity')]
 	for key, text in order:
 		if key is None:
-			print >> out['summary'], text
+			print(text, file=out['summary'])
 		else:
-			print >> out['summary'], "%6d   %s" % (len(counts[key]), text)
+			print("%6d   %s" % (len(counts[key]), text), file=out['summary'])
 
 	for name in out:
 		out[name].close()

@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
+from __future__ import print_function, absolute_import
 
 
 def coreference_cluster_match(gold, auto):
@@ -23,15 +21,15 @@ def calc_prf(match, gold, test):
 	False Positive = test - match
 	False Negative = gold - match
 
-	>>> print calc_prf(0, 0, 0)
+	>>> print(calc_prf(0, 0, 0))
 	(1.0, 1.0, 1.0)
-	>>> print calc_prf(0, 0, 5)
+	>>> print(calc_prf(0, 0, 5))
 	(0.0, 1.0, 0.0)
-	>>> print calc_prf(0, 4, 5)
+	>>> print(calc_prf(0, 4, 5))
 	(0.0, 0.0, 0.0)
-	>>> print calc_prf(0, 4, 0)
+	>>> print(calc_prf(0, 4, 0))
 	(0.0, 0.0, 0.0)
-	>>> print calc_prf(2, 2, 8)
+	>>> print(calc_prf(2, 2, 8))
 	(0.25, 1.0, 0.4)
 	"""
 	if gold == 0:
@@ -47,9 +45,3 @@ def calc_prf(match, gold, test):
 		return p, r, f
 	except Exception:
 		return 0.0, 0.0, 0.0
-
-
-if __name__ == "__main__":
-	print "Running doctest"
-	import doctest
-	doctest.testmod()

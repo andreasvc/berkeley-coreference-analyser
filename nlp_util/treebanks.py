@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
-
-from pstree import *
+from __future__ import print_function, absolute_import
+from nlp_util.pstree import PSTree, tree_from_text
 
 # TODO: Handle malformed input with trees that have random stuff instead
 # of symbols
@@ -61,9 +58,9 @@ def remove_trivial_unaries(tree, in_place=True):
 
 	>>> tree = tree_from_text("(ROOT (S (S (PP (PP (PP (IN By) (NP (CD 1997))))))))")
 	>>> otree = remove_trivial_unaries(tree, False)
-	>>> print otree
+	>>> print(otree)
 	(ROOT (S (PP (IN By) (NP (CD 1997)))))
-	>>> print tree
+	>>> print(tree)
 	(ROOT (S (S (PP (PP (PP (IN By) (NP (CD 1997))))))))
 	>>> remove_trivial_unaries(tree)
 	(ROOT (S (PP (IN By) (NP (CD 1997)))))
@@ -177,7 +174,7 @@ def apply_collins_rules(tree, in_place=True):
 	>>> tree = tree_from_text("(ROOT (S (NP-SBJ (NNP Ms.) (NNP Haag) ) (VP (VBZ plays) (NP (NNP Elianti) )) (. .) ))")
 	>>> apply_collins_rules(tree)
 	(ROOT (S (NP (NNP Ms.) (NNP Haag)) (VP (VBZ plays) (NP (NNP Elianti)))))
-	>>> print tree.word_yield()
+	>>> print(tree.word_yield())
 	Ms. Haag plays Elianti
 
 	# cutting nulls
@@ -203,7 +200,7 @@ def apply_collins_rules(tree, in_place=True):
 	# Remove Puncturation
 	# words_to_ignore = set(["'","`","''","``","--",":",";","-",",",".","...",".","?","!"])
 	labels_to_ignore = ["-NONE-", ",", ":", "``", "''", "."]
-	remove_nodes(tree, lambda (t): t.label in labels_to_ignore, True)
+	remove_nodes(tree, lambda t: t.label in labels_to_ignore, True)
 
 	# Set all PRTs to be ADVPs
 	POS_to_convert = {'PRT': 'ADVP'}
@@ -258,7 +255,7 @@ def ptb_read_tree(source,
 	The function reads a character at a time, stopping as soon as a tree can be
 	constructed, so multiple trees on a sinlge line are manageable.
 
-	>>> from StringIO import StringIO
+	>>> from io import StringIO
 	>>> file_text = '''(ROOT (S
 	...   (NP-SBJ (NNP Scotty) )
 	...   (VP (VBD did) (RB not)
@@ -327,10 +324,10 @@ def conll_read_tree(source,
 		blank_line_coverage=False):
 	"""Read a single tree from the given CoNLL Shared Task OntoNotes data file.
 
-	>>> from StringIO import StringIO
+	>>> from io import StringIO
 	>>> in_file = StringIO(CONLL_EXAMPLE)
 	>>> tree = conll_read_tree(in_file)
-	>>> print tree
+	>>> print(tree)
 	(TOP (S (NP (PRP They)) (VP (MD will) (VP (VB remain) (PP (IN on) (NP (NP (DT a) (NML (JJR lower) (HYPH -) (NN priority)) (NN list)) (SBAR (WHNP (WDT that)) (S (VP (VBZ includes) (NP (CD 17) (JJ other) (NNS countries))))))))) (. .)))"""
 	cur_text = []
 	while True:
@@ -365,7 +362,7 @@ def generate_trees(source,
 		allow_empty_words=False):
 	"""Read trees from the given file (opening the file if only a string is given).
 
-	>>> from StringIO import StringIO
+	>>> from io import StringIO
 	>>> file_text = '''(ROOT (S
 	...   (NP-SBJ (NNP Scotty) )
 	...   (VP (VBD did) (RB not)
@@ -383,7 +380,7 @@ def generate_trees(source,
 	...		(. .) ))'''
 	>>> in_file = StringIO(file_text)
 	>>> for tree in generate_trees(in_file):
-	...   print tree
+	...   print(tree)
 	(ROOT (S (NP-SBJ (NNP Scotty)) (VP (VBD did) (RB not) (VP (VB go) (ADVP (RB back)) (PP (TO to) (NP (NN school))))) (. .)))
 	(ROOT (S (NP-SBJ (DT The) (NN bandit)) (VP (VBZ laughs) (PP (IN in) (NP (PRP$ his) (NN face)))) (. .)))"""
 	if isinstance(source, str):
@@ -407,13 +404,5 @@ def read_trees(source,
 		tree_reader=ptb_read_tree,
 		max_sents=-1,
 		return_empty=False):
-	return [
-			tree for tree in generate_trees(source, tree_reader, max_sents,
-			return_empty)
-	]
-
-
-if __name__ == '__main__':
-	print "Running doctest"
-	import doctest
-	doctest.testmod()
+	return [tree for tree
+			in generate_trees(source, tree_reader, max_sents, return_empty)]

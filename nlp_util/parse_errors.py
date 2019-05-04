@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
-import pstree
+from __future__ import print_function, absolute_import
+from nlp_util import pstree
 
 
 class Parse_Error_Set:
@@ -137,7 +135,3 @@ def counts_for_prf(test, gold, include_root=False, include_terminals=False):
 	if include_terminals:
 		match -= len(errors.POS)
 	return match, gcount, tcount, len(errors.crossing), len(errors.POS)
-
-
-if __name__ == '__main__':
-	print "No unit testing implemented for Error_Set"

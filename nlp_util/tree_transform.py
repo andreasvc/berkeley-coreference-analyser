@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
-import pstree
+from __future__ import print_function, absolute_import
+from nlp_util import pstree
 
 
 def change_label_by_node(node, new_label, in_place):
@@ -43,7 +41,7 @@ def add_node(tree, span, label, position=0, in_place=True):
 	# Do not operate on the root node
 	if nodes[0].parent is None:
 		nodes = nodes[0].subtrees[:]
-	for i in xrange(position):
+	for i in range(position):
 		if len(nodes) > 1:
 			return (False, "Position {} is too deep".format(position))
 		nodes[0] = nodes[0].subtrees[0]
@@ -91,7 +89,7 @@ def remove_node_by_span(tree, span, label, position, in_place):
 	multiple nodes of the requested type exist.  Zero indicates to remove the
 	top node, one indicates to remove the second, and so on."""
 	nodes = tree.get_nodes('all', span[0], span[1])
-	nodes = filter(lambda node: node.label == label, nodes)
+	nodes = [node for node in nodes if node.label == label]
 	if len(nodes) <= position:
 		return (False, "No node matching {} ({}, {} - {}) found".format(
 				position, label, *span))

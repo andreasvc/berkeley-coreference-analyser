@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
+from __future__ import print_function, absolute_import
 import sys
 
 collins_mapping_table = {
@@ -119,7 +117,7 @@ alpino_headrules = {
 
 headrules = {'en': {}}
 # Wrap rule in list to support multiple rules per label.
-for label, rule in collins_mapping_table.items():
+for label, rule in list(collins_mapping_table.items()):
 	headrules['en'][label] = [rule]
 headrules['nl'] = alpino_headrules
 
@@ -144,7 +142,7 @@ def first_search(tree, options, head_map):
 
 
 def last_search(tree, options, head_map):
-	for i in xrange(len(tree.subtrees) - 1, -1, -1):
+	for i in range(len(tree.subtrees) - 1, -1, -1):
 		subtree = tree.subtrees[i]
 		if get_head(head_map,
 				subtree)[2] in options or subtree.label in options:
@@ -217,7 +215,7 @@ def collins_find_heads(tree, head_map=None, lang=None):
 	for info in rules:
 		# Look through and take the first/last occurrence that matches
 		for label in info[1]:
-			for i in xrange(len(tree.subtrees)):
+			for i in range(len(tree.subtrees)):
 				if info[0] == 'right':
 					i = len(tree.subtrees) - i - 1
 				subtree = tree.subtrees[i]
@@ -403,8 +401,3 @@ Else return the last word
 4 WHADVP	1	CC WRB
 8 WHNP	0	WDT WP WP$ WHADJP WHPP WHNP
 5 WHPP	1	IN TO FW'''
-
-if __name__ == "__main__":
-	print "Running doctest"
-	import doctest
-	doctest.testmod()

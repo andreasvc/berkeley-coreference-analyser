@@ -1,17 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: set ts=2 sw=2 noet:
+from __future__ import print_function, absolute_import
 import os
 import re
 import sys
 import glob
 import fnmatch
 from collections import defaultdict
-from StringIO import StringIO
-import pstree
-import treebanks
-import head_finder
-import render_tree
+from io import StringIO
+from nlp_util import pstree
+from nlp_util import treebanks
+from nlp_util import head_finder
+from nlp_util import render_tree
 
 
 def read_conll_parses(lines):
@@ -48,7 +46,7 @@ def read_conll_ner(lines):
 			elif ')' in ner_info and '*' in ner_info:
 				start = cur.pop()
 				if sentence != start[1]:
-					print >> sys.stderr, "Something mucked up", sentence, word, start
+					print("Something mucked up", sentence, word, start, file=sys.stderr)
 				info[sentence, start[2], word + 1] = start[0]
 		word += 1
 		if len(fields) == 0:
@@ -100,27 +98,27 @@ def read_conll_coref(lines):
 						# print line_no, len(lines)
 						# raise Exception(
 						# 		"Ending mention with no start: " + str(val))
-						print >> sys.stderr, "Ignoring a mention with no start",
-						print >> sys.stderr, str(val), line.strip(), line_no
+						print("Ignoring a mention with no start", end=' ', file=sys.stderr)
+						print(str(val), line.strip(), line_no, file=sys.stderr)
 						continue
 					if len(unmatched_mentions[(sentence, val)]) == 0:
-						print >> sys.stderr, "No other start available", str(
-								val), line.strip(), line_no
+						print("No other start available", str(
+								val), line.strip(), line_no, file=sys.stderr)
 						continue
 					start = unmatched_mentions[(sentence, val)].pop()
 				end = word + 1
 				if (sentence, start, end) in mentions:
-					print >> sys.stderr, "Duplicate mention",
-					print >> sys.stderr, sentence, start, end, val, mentions[
-							sentence, start, end]
+					print("Duplicate mention", end=' ', file=sys.stderr)
+					print(sentence, start, end, val, mentions[
+							sentence, start, end], file=sys.stderr)
 				else:
 					mentions[sentence, start, end] = val
 					clusters[val].append((sentence, start, end))
 		word += 1
 	for key in unmatched_mentions:
 		if len(unmatched_mentions[key]) > 0:
-			print >> sys.stderr, "Mention started, but did not end ", str(
-					unmatched_mentions[key])
+			print("Mention started, but did not end ", str(
+					unmatched_mentions[key]), file=sys.stderr)
 			# raise Exception(
 			# 		"Mention started, but did not end "
 			# 		+ str(unmatched_mentions[key]))
@@ -185,8 +183,8 @@ def read_stanford_coref(filename, gold_text):
 			cluster += 1
 		elif '</mention>' in line:
 			if (sentence, start, end) in mentions:
-				print "Duplicate mention:", cluster, mentions[sentence, start,
-						end]
+				print("Duplicate mention:", cluster, mentions[sentence, start,
+						end])
 			else:
 				mentions[sentence, start, end] = cluster
 				clusters[cluster].append((sentence, start, end))
@@ -232,8 +230,8 @@ def read_uiuc_coref(filename, gold_text):
 					if msentence != sentence:
 						end = len(gold_text[msentence])
 					if (msentence, start, end) in mentions:
-						print "Duplicate mention:", cluster, mentions[
-								msentence, start, end]
+						print("Duplicate mention:", cluster, mentions[
+								msentence, start, end])
 					else:
 						mentions[msentence, start, end] = cluster
 						clusters[cluster].append((msentence, start, end))
@@ -523,8 +521,8 @@ def read_conll_doc(filename,
 					keys = ("tc/ch/00/ch_%04d" % val, keys[1])
 			if len(cur) > 0:
 				if keys is None:
-					print >> sys.stderr, "Error reading conll file - ",
-					print >> sys.stderr, "invalid #begin statement\n", line
+					print("Error reading conll file - ", end=' ', file=sys.stderr)
+					print("invalid #begin statement\n", line, file=sys.stderr)
 				else:
 					info = {}
 					if rtext:
@@ -573,9 +571,9 @@ def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if len(filenames) == 1:
 		read_conll_doc(filenames[0], ans, lang=lang)
 	else:
-		print >> sys.stderr, ("Reading matching doc failed for %s/%s as "
+		print(("Reading matching doc failed for %s/%s as "
 				"%d files were found."
-				% (dir_prefix, filename, len(filenames)))
+				% (dir_prefix, filename, len(filenames))), file=sys.stderr)
 	return ans
 
 
@@ -651,14 +649,15 @@ def read_conll_scorer_output(text):
 	"""
 
 	>>> results = read_conll_scorer_output(CONLLSCORER_EXAMPLE_OUTPUT)
-	>>> for metric in results:
-	...   print metric, results[metric]
-	bcub [77.66, 66.09, 71.41]
-	ceafm [64.51, 70.29, 67.28]
-	muc [71.25, 65.38, 68.19]
-	mentions [77.49, 70.31, 73.72]
-	ceafe [46.29, 52.31, 49.12]
-	blanc [80.8, 79.36, 80.06]
+	>>> for metric in sorted(results):
+	...   print(metric, [round(100 * a, 2) for a in results[metric]])
+	bcub [77.67, 66.09, 71.41]
+	blanc [80.81, 79.36, 80.08]
+	ceafe [46.29, 52.32, 49.12]
+	ceafm [64.51, 70.3, 67.28]
+	conll [65.07, 61.27, 62.91]
+	mentions [77.49, 70.32, 73.73]
+	muc [71.25, 65.39, 68.19]
 	"""
 	metric = None
 	totals = False
@@ -690,12 +689,6 @@ def read_conll_scorer_output(text):
 	if 'ceafe' in results and 'muc' in results and 'bcub' in results:
 		results['conll'] = [0, 0, 0]
 		for metric in ['muc', 'bcub', 'ceafe']:
-			for i in xrange(3):
+			for i in range(3):
 				results['conll'][i] += results[metric][i] / 3.0
 	return results
-
-
-# if __name__ == "__main__":
-# 	print "Running doctest"
-# 	import doctest
-# 	doctest.testmod()

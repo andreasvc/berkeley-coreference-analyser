@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
 """Converts output from a range of coref systems into the style of the 2011
@@ -11,6 +11,7 @@ source filename:  bn__voa__02__voa_0220__000.<whatever>
 equivalent file:  bn/voa/02/voa_0220.v2_auto_conll
 intended header:  #begin document (bn/voa/02/voa_0220); part 000
 """
+from __future__ import print_function, absolute_import
 import os
 import sys
 import glob
@@ -73,7 +74,7 @@ def read_ims(auto_src, gold_src):
 
 
 def read_opennlp(auto_src, gold_src):
-	print "OpenNLP support is under development."
+	print("OpenNLP support is under development.")
 
 
 def read_reconcile(auto_src, gold_src):
@@ -84,7 +85,7 @@ def read_reconcile(auto_src, gold_src):
 
 
 def read_relaxcor(auto_src, gold_src):
-	print "RelaxCor support is under development."
+	print("RelaxCor support is under development.")
 
 
 def read_stanford_xml(auto_src, gold_src):
@@ -120,33 +121,29 @@ if __name__ == '__main__':
 			'stanford_xml': read_stanford_xml, 'stanford': read_stanford,
 			'uiuc': read_uiuc,
 	}
-	init.argcheck(
-			sys.argv, 5, 5, "Translate a system output into the CoNLL format",
-			"<prefix> <[{}]> <dir | file> <gold dir>".format(','.join(
-			formats.keys())))
+    try:
+        _opts, args = getopt.gnu_getopt(sys.argv[1:], '', [])
+        output_prefix, fmt, auto_src, gold_src = args
+    except (getopt.GetoptError, ValueError):
+        print('Translate a system output into the CoNLL format')
+        print('./%s <prefix> <[%s]> <dir | file> <gold dir>'
+				% (sys.argv[0], ','.join(formats)))
+        return
+	if fmt not in formats:
+		print("Invalid format.  Valid options are:")
+		print('\n'.join(formats))
+		return
 
-	out = open(sys.argv[1] + '.out', 'w')
-	log = open(sys.argv[1] + '.log', 'w')
-	init.header(sys.argv, log)
-
-	auto_src = sys.argv[3]
-	gold_src = sys.argv[4]
-	if sys.argv[2] not in formats:
-		print "Invalid format.  Valid options are:"
-		print '\n'.join(formats.keys())
-		sys.exit(1)
-	auto, gold = formats[sys.argv[2]](auto_src, gold_src)
-
-	for doc in auto:
-		for part in auto[doc]:
-			for mention in auto[doc][part]['mentions']:
-				if mention[1] >= mention[2]:
-					info = "Invalid mention span {} from {} {}".format(
-							str(mention), doc, part)
-					info += '\n' + gold[doc][part]['text'][mention[0]]
-					raise Exception(info)
-
-	coreference_rendering.print_conll_style(auto, gold, out)
-
-	out.close()
-	log.close()
+	with (open(output_prefix + '.out', 'w') as out,
+			open(output_prefix + '.log', 'w') as log):
+		init.header(sys.argv, log)
+		auto, gold = formats[fmt](auto_src, gold_src)
+		for doc in auto:
+			for part in auto[doc]:
+				for mention in auto[doc][part]['mentions']:
+					if mention[1] >= mention[2]:
+						info = "Invalid mention span {} from {} {}".format(
+								str(mention), doc, part)
+						info += '\n' + gold[doc][part]['text'][mention[0]]
+						raise Exception(info)
+		coreference_rendering.print_conll_style(auto, gold, out)

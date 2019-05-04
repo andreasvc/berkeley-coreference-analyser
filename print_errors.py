@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
-
+from __future__ import print_function, absolute_import
 import sys
 import getopt
 from nlp_util import (coreference_reading, coreference_rendering, coreference,
@@ -15,8 +15,8 @@ def main():
 		output_prefix, gold_dir, test_file = args
 	except (getopt.GetoptError, ValueError):
 		print('Print coreference resolution errors')
-		print('./%s <prefix> <gold_dir> <test_file> '
-				'[--resolvespanerrors] [--lang=<en|nl>]' % sys.argv[0])
+		print(('./%s <prefix> <gold_dir> <test_file> '
+				'[--resolvespanerrors] [--lang=<en|nl>]' % sys.argv[0]))
 		return
 	opts = dict(opts)
 	lang = opts.get('--lang', 'en')
@@ -33,7 +33,8 @@ def main():
 			out_cluster_errors, out_cluster_context, out_cluster_missing,
 			out_cluster_extra, out_mention_list, out_mention_text
 	]
-	init.header(sys.argv, out_files)
+	for out in out_files:
+		init.header(sys.argv, out)
 
 	for function, outfile in [
 			(coreference_rendering.print_mention_text, out_mention_text),
@@ -45,7 +46,7 @@ def main():
 	]:
 		instructions = function.__doc__.split('\n')
 		instructions = ['# ' + inst for inst in instructions]
-		print >> outfile, '\n'.join(instructions)
+		print('\n'.join(instructions), file=outfile)
 
 	# Define an order
 	order = []
@@ -57,7 +58,7 @@ def main():
 	for doc, part in order:
 		# Setup
 		for out in out_files:
-			print >> out, "\n# %s %s\n" % (doc, part)
+			print("\n# %s %s\n" % (doc, part), file=out)
 
 		text = gold[doc][part]['text']
 
@@ -100,8 +101,8 @@ def main():
 				groups, out_cluster_errors, out_cluster_context, text,
 				gold_parses, gold_heads, auto_clusters, gold_clusters,
 				gold_mentions)
-		print >> out_cluster_errors, "Entirely missing or extra\n"
-		print >> out_cluster_context, "Entirely missing or extra\n"
+		print("Entirely missing or extra\n", file=out_cluster_errors)
+		print("Entirely missing or extra\n", file=out_cluster_context)
 		coreference_rendering.print_cluster_missing(out_cluster_errors,
 				out_cluster_context,
 				out_cluster_missing, text,

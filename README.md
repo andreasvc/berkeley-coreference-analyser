@@ -6,7 +6,8 @@ applied to the systems from the 2011 CoNLL Shared Task, see:
    Jonathan K. Kummerfeld and Dan Klein, 
    EMNLP 2013
 
-To use the system, download it one of these ways, and run classify_coreference_errors.py as shown below:
+To use the system, download it one of these ways, and run `classify_coreference_errors.py`
+as shown below:
 
 - [Download .zip](https://github.com/jkkummerfeld/berkeley-coreference-analyser/zipball/master)
 - [Download .tar.gz](https://github.com/jkkummerfeld/berkeley-coreference-analyser/tarball/master)
@@ -98,11 +99,11 @@ By default all optional flags are disabled and English data is expected.
 
 ##  Questions and Answers
 
-Q: I'm getting errors such as "SyntaxError: invalid syntax", "ValueError: zero
-length field name in format", what's broken?
+Q: I'm getting errors such as "TypeError: initial_value must be unicode or None, not str",
+what's broken?
 
-A: Check your version of Python.  This code was designed for Python 2.7.x, it
-will not work with Python 3 or with Python 2.6.x and earlier.
+A: Check your version of Python.  This code was designed for Python 2.7.x, but
+later converted to Python 3.3+, it will not work with earlier versions.
 
 Q: What about languages other than English?
 
