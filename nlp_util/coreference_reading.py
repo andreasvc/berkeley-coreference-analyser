@@ -501,8 +501,11 @@ def read_conll_coref_system_output(filename, ans=None):
 def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if ans is None:
 		ans = defaultdict(lambda: {})
-	query = os.path.join(dir_prefix, filename + '*gold*conll')
+	query = os.path.join(dir_prefix, filename + '*conll')
 	filenames = glob.glob(query)
+	if len(filenames) > 1:
+		query = os.path.join(dir_prefix, filename + '*gold*conll')
+		filenames = glob.glob(query)
 	if len(filenames) == 1:
 		read_conll_doc(filenames[0], ans, lang=lang)
 	else:

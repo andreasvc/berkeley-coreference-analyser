@@ -3,7 +3,6 @@
 # vim: set ts=2 sw=2 noet:
 
 import sys
-import re
 
 
 collins_mapping_table = {

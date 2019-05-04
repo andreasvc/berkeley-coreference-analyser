@@ -163,7 +163,7 @@ def split_merge_properties(part, cluster, auto, gold, text, parses, heads, gold_
 	# Size of rest
 	ans.append(len(rest)) # 1
 
-	# If size 1, what the text i
+	# If size 1, what the text is
 	mtext = None
 	if len(part) == 1:
 		mention = iter(part).next()
