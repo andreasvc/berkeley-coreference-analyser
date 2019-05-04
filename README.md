@@ -36,9 +36,9 @@ Example of system output (groupings indicate system clusters, colours indicate g
 
 There are three main programs:
 
-- classify_coreference_errors.py, Classify errors in system output, using the CoNLL output format
-- print_errors.py, Print system output in several ways, to illustrate the errors
-- coreference_format_conversion.py, Convert the output of several systems to the CoNLL format
+- `classify_coreference_errors.py`, Classify errors in system output, using the CoNLL output format
+- `print_errors.py`, Print system output in several ways, to illustrate the errors
+- `coreference_format_conversion.py`, Convert the output of several systems to the CoNLL format
 
 Running each with no arguments will provide help information.  Also see the
 sample folders for example runs.  These were generated as follows:
@@ -94,6 +94,7 @@ Running the commands with an invalid number of arguments will give you the follo
 
 ./coreference_format_conversion.py <prefix> <[cherrypicker,ims,bart,conll,stanford_xml,stanford,uiuc,reconcile]> <dir | file> <gold dir>
 ```
+By default all optional flags are disabled and English data is expected.
 
 ##  Questions and Answers
 
@@ -110,7 +111,7 @@ need to be altered is the head finder.  I do not plan to add support for other
 languages in the near future, but am happy to incorporate proposals of code
 amendments!
 
-UPDATE: Pass the option --lang=nl to work with Dutch data; assumes Alpino trees
+**UPDATE**: Pass the option `--lang=nl` to work with Dutch data; assumes Alpino trees
 and rich POS tags in gold CoNLL data; POS tags should have parentheses replaced
 by square brackets; e.g., `VNW[pers,pron,nomin,vol,1,ev]`.
 To add support for another language, search for the variable `lang` in
