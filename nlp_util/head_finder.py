@@ -1,38 +1,48 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
-
 import sys
 
-
 collins_mapping_table = {
-  'ADJP': ('right', ['NNS', 'QP', 'NN', '$', 'ADVP', 'JJ', 'VBN', 'VBG', 'ADJP', 'JJR', 'NP', 'JJS', 'DT', 'FW', 'RBR', 'RBS', 'SBAR', 'RB']),
-  'ADVP': ('left', ['RB', 'RBR', 'RBS', 'FW', 'ADVP', 'TO', 'CD', 'JJR', 'JJ', 'IN', 'NP', 'JJS', 'NN']),
-  'CONJP': ('left', ['CC', 'RB', 'IN']),
-  'FRAG': ('left', []),
-  'INTJ': ('right', []),
-  'LST': ('left', ['LS', ':']),
-  'NAC': ('right', ['NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP', 'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW']),
-  'PP': ('left', ['IN', 'TO', 'VBG', 'VBN', 'RP', 'FW']),
-  'PRN': ('right', []),
-  'PRT': ('left', ['RP']),
-  'QP': ('right', ['$', 'IN', 'NNS', 'NN', 'JJ', 'RB', 'DT', 'CD', 'NCD', 'QP', 'JJR', 'JJS']),
-  'RRC': ('left', ['VP', 'NP', 'ADVP', 'ADJP', 'PP']),
-  'S': ('right', ['TO', 'IN', 'VP', 'S', 'SBAR', 'ADJP', 'UCP', 'NP']),
-  'SBAR': ('right', ['WHNP', 'WHPP', 'WHADVP', 'WHADJP', 'IN', 'DT', 'S', 'SQ', 'SINV', 'SBAR', 'FRAG']),
-  'SBARQ': ('right', ['SQ', 'S', 'SINV', 'SBARQ', 'FRAG']),
-  'SINV': ('right', ['VBZ', 'VBD', 'VBP', 'VB', 'MD', 'VP', 'S', 'SINV', 'ADJP', 'NP']),
-  'SQ': ('right', ['VBZ', 'VBD', 'VBP', 'VB', 'MD', 'VP', 'SQ']),
-  'UCP': ('left', []),
-  'VP': ('right', ['TO', 'VBD', 'VBN', 'MD', 'VBZ', 'VB', 'VBG', 'VBP', 'VP', 'ADJP', 'NN', 'NNS', 'NP']),
-  'WHADJP': ('right', ['CC', 'WRB', 'JJ', 'ADJP']),
-  'WHADVP': ('left', ['CC', 'WRB']),
-  'WHNP': ('right', ['WDT', 'WP', 'WP$', 'WHADJP', 'WHPP', 'WHNP']),
-  'WHPP': ('left', ['IN', 'TO', 'FW']),
-  # Added by me:
-  'NX': ('right', ['NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP', 'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW']),
-  'X': ('right', ['NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP', 'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW']),
-  'META': ('right', [])
+		'ADJP': ('right', [
+		'NNS', 'QP', 'NN', '$', 'ADVP', 'JJ', 'VBN', 'VBG', 'ADJP',
+		'JJR', 'NP', 'JJS', 'DT', 'FW', 'RBR', 'RBS', 'SBAR', 'RB'
+		]), 'ADVP': ('left', [
+		'RB', 'RBR', 'RBS', 'FW', 'ADVP', 'TO', 'CD', 'JJR', 'JJ',
+		'IN', 'NP', 'JJS', 'NN'
+		]), 'CONJP': ('left', ['CC', 'RB', 'IN']), 'FRAG': ('left', []),
+		'INTJ': ('right', []), 'LST': ('left', ['LS', ':']), 'NAC': ('right', [
+		'NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP',
+		'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW'
+		]), 'PP': ('left', ['IN', 'TO', 'VBG', 'VBN', 'RP', 'FW']), 'PRN':
+		('right', []), 'PRT': ('left', ['RP']), 'QP': ('right', [
+		'$', 'IN', 'NNS', 'NN', 'JJ', 'RB', 'DT', 'CD', 'NCD', 'QP',
+		'JJR', 'JJS'
+		]), 'RRC': ('left', ['VP', 'NP', 'ADVP', 'ADJP', 'PP']), 'S':
+		('right', ['TO', 'IN', 'VP', 'S', 'SBAR', 'ADJP', 'UCP',
+		'NP']), 'SBAR': ('right', [
+		'WHNP', 'WHPP', 'WHADVP', 'WHADJP', 'IN', 'DT', 'S',
+		'SQ', 'SINV', 'SBAR', 'FRAG'
+		]), 'SBARQ': ('right', ['SQ', 'S', 'SINV', 'SBARQ',
+		'FRAG']), 'SINV':
+		('right',
+		['VBZ', 'VBD', 'VBP', 'VB', 'MD', 'VP', 'S', 'SINV', 'ADJP', 'NP'
+		]), 'SQ': ('right', ['VBZ', 'VBD', 'VBP', 'VB', 'MD', 'VP', 'SQ']),
+		'UCP': ('left', []), 'VP': ('right', [
+		'TO', 'VBD', 'VBN', 'MD', 'VBZ', 'VB', 'VBG', 'VBP', 'VP',
+		'ADJP', 'NN', 'NNS', 'NP'
+		]), 'WHADJP': ('right', ['CC', 'WRB', 'JJ',
+		'ADJP']), 'WHADVP': ('left', ['CC', 'WRB']),
+		'WHNP': ('right', ['WDT', 'WP', 'WP$', 'WHADJP', 'WHPP',
+		'WHNP']), 'WHPP': ('left', ['IN', 'TO', 'FW']),
+		# Added by me:
+		'NX': ('right', [
+		'NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP',
+		'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW'
+		]), 'X': ('right', [
+		'NN', 'NNS', 'NNP', 'NNPS', 'NP', 'NAC', 'EX', '$', 'CD', 'QP',
+		'PRP', 'VBG', 'JJ', 'JJS', 'JJR', 'ADJP', 'FW'
+		]), 'META': ('right', [])
 }
 
 # Head rules for the Alpino treebank.
@@ -41,61 +51,62 @@ collins_mapping_table = {
 # 2. "pt" attribute or "postag" attribute without features.
 # Multiple rules may be given for the same label, these are applied
 # consecutively.
+# yapf: disable
 alpino_headrules = {
 		'ADVP': [('right', ['ADV', 'BW', 'MWU', 'ADJ', 'ADJ'])],
 		'AHI': [('right', ['INF', 'MWU'])],
 		'AP': [('right', ['ADJ', 'ADJ', 'MWU'])],
 		'CONJ': [
-			('left', ['VG', 'NP', 'SMAIN', 'NOUN', 'N', 'PP', 'ADJ', 'ADJ',
-				'SSUB', 'MWU', 'NUM', 'AP', 'PPART', 'DU', 'SV1', 'TI']),
-			('left', ['INF', 'CP', 'CONJ', 'REL', 'ADV', 'BW', 'DETP', 'VERB',
-				'WW', 'WHSUB', 'PPRES', 'ADVP', 'OTI', 'DET', 'VNW', 'LID',
-				'WHQ', 'WHREL'])],
+		('left', ['VG', 'NP', 'SMAIN', 'NOUN', 'N', 'PP', 'ADJ', 'ADJ',
+		'SSUB', 'MWU', 'NUM', 'AP', 'PPART', 'DU', 'SV1', 'TI']),
+		('left', ['INF', 'CP', 'CONJ', 'REL', 'ADV', 'BW', 'DETP', 'VERB',
+		'WW', 'WHSUB', 'PPRES', 'ADVP', 'OTI', 'DET', 'VNW', 'LID',
+		'WHQ', 'WHREL'])],
 		'CP': [
-			('left', ['COMP', 'VG', 'SSUB', 'NP', 'COMPARATIVE', 'NOUN', 'N',
-				'CONJ', 'TI', 'ADV', 'BW', 'PP', 'MWU', 'ADJ', 'ADJ', 'SV1',
-				'CP']),
-			('left', ['NUM', 'DU', 'VERB', 'WW', 'ADVP', 'PPART', 'AP'])],
+		('left', ['COMP', 'VG', 'SSUB', 'NP', 'COMPARATIVE', 'NOUN', 'N',
+		'CONJ', 'TI', 'ADV', 'BW', 'PP', 'MWU', 'ADJ', 'ADJ', 'SV1',
+		'CP']),
+		('left', ['NUM', 'DU', 'VERB', 'WW', 'ADVP', 'PPART', 'AP'])],
 		'DETP': [('right', ['NUM', 'DET', 'VNW', 'LID', 'MWU'])],
 		'DU': [
-			('right', ['SMAIN', 'COMP', 'VG', 'NP', 'PP', 'SV1', 'DU', 'ADV',
-				'BW', 'CONJ', 'NOUN', 'N', 'CP', 'MWU', 'ADJ', 'ADJ', 'NUM',
-				'SSUB']),
-			('right', ['TAG', 'AP', 'ADVP', 'WHQ', 'WHREL', 'OTI', 'PPART',
-				'VERB', 'WW', 'VG', 'INF', 'DET', 'VNW', 'LID', 'TI'])],
+		('right', ['SMAIN', 'COMP', 'VG', 'NP', 'PP', 'SV1', 'DU', 'ADV',
+		'BW', 'CONJ', 'NOUN', 'N', 'CP', 'MWU', 'ADJ', 'ADJ', 'NUM',
+		'SSUB']),
+		('right', ['TAG', 'AP', 'ADVP', 'WHQ', 'WHREL', 'OTI', 'PPART',
+		'VERB', 'WW', 'VG', 'INF', 'DET', 'VNW', 'LID', 'TI'])],
 		'INF': [
-			('right', ['VERB', 'WW']),
-			('right', ['PP', 'NP', 'ADV', 'BW', 'ADJ', 'ADJ', 'NOUN', 'N'])],
+		('right', ['VERB', 'WW']),
+		('right', ['PP', 'NP', 'ADV', 'BW', 'ADJ', 'ADJ', 'NOUN', 'N'])],
 		'MWU': [
-			('right', ['NOUN', 'N', 'PREP', 'VZ', 'FIXED', 'ADV', 'BW', 'ADJ',
-				'ADJ', 'NUM', 'DET', 'VNW', 'LID', 'COMP', 'VG', 'VG', 'PP',
-				'COMP', 'VG', 'TAG']),
-			('right', ['PART', 'VZ', 'VERB', 'WW', 'LET', 'PUNCT', 'NAME',
-				'SPEC'])],
+		('right', ['NOUN', 'N', 'PREP', 'VZ', 'FIXED', 'ADV', 'BW', 'ADJ',
+		'ADJ', 'NUM', 'DET', 'VNW', 'LID', 'COMP', 'VG', 'VG', 'PP',
+		'COMP', 'VG', 'TAG']),
+		('right', ['PART', 'VZ', 'VERB', 'WW', 'LET', 'PUNCT', 'NAME',
+		'SPEC'])],
 		'NP': [
-			('right', ['NOUN', 'N', 'MWU', 'NUM', 'ADJ', 'ADJ', 'DET', 'VNW',
-				'LID', 'VERB', 'WW', 'ADV', 'BW']),
-			('right', ['DET', 'VNW', 'LID', 'ADJ', 'ADJ', 'ADV', 'BW', 'AP',
-				'PP', 'NUM'])],
+		('right', ['NOUN', 'N', 'MWU', 'NUM', 'ADJ', 'ADJ', 'DET', 'VNW',
+		'LID', 'VERB', 'WW', 'ADV', 'BW']),
+		('right', ['DET', 'VNW', 'LID', 'ADJ', 'ADJ', 'ADV', 'BW', 'AP',
+		'PP', 'NUM'])],
 		'OTI': [('right', ['COMP', 'VG', 'TI', 'CONJ', 'ADV', 'BW'])],
 		'PP': [
-			('left', ['PREP', 'VZ', 'MWU', 'PP']),
-			('left', ['PP', 'NP', 'NOUN', 'N'])],
+		('left', ['PREP', 'VZ', 'MWU', 'PP']),
+		('left', ['PP', 'NP', 'NOUN', 'N'])],
 		'PPART': [
-			('right', ['VERB', 'WW', 'ADJ', 'ADJ']),
-			('right', ['PP', 'NP', 'NUM'])],
+		('right', ['VERB', 'WW', 'ADJ', 'ADJ']),
+		('right', ['PP', 'NP', 'NUM'])],
 		'PPRES': [('right', ['ADJ', 'ADJ'])],
 		'REL': [('right', ['NOUN', 'N', 'PP', 'ADV', 'BW', 'NP', 'MWU'])],
 		'ROOT': [('right', ['LET', 'PUNCT', 'SMAIN'])],
 		'SMAIN': [
-			('left', ['VERB', 'WW']),
-			('left', ['NP', 'PP', 'ADV', 'BW', 'PPART', 'MWU', 'NOUN', 'N',
-				'NUM', 'AP', 'INF', 'CONJ', 'CP', 'PPRES', 'ADVP', 'TI']),
-			('left', ['ADJ', 'ADJ', 'PREP', 'VZ'])],
+		('left', ['VERB', 'WW']),
+		('left', ['NP', 'PP', 'ADV', 'BW', 'PPART', 'MWU', 'NOUN', 'N',
+		'NUM', 'AP', 'INF', 'CONJ', 'CP', 'PPRES', 'ADVP', 'TI']),
+		('left', ['ADJ', 'ADJ', 'PREP', 'VZ'])],
 		'SSUB': [
-			('right', ['VERB', 'WW']),
-			('right', ['NP', 'PPART', 'ADV', 'BW', 'NOUN', 'N', 'PP', 'CONJ',
-				'ADVP'])],
+		('right', ['VERB', 'WW']),
+		('right', ['NP', 'PPART', 'ADV', 'BW', 'NOUN', 'N', 'PP', 'CONJ',
+		'ADVP'])],
 		'SV1': [('left', ['VERB', 'WW'])],
 		'SVAN': [('right', ['ADV', 'BW', 'COMP', 'VG'])],
 		'TI': [('right', ['COMP', 'VG', 'INF', 'VERB', 'WW'])],
@@ -103,7 +114,8 @@ alpino_headrules = {
 		'WHQ': [('right', ['NOUN', 'N', 'ADV', 'BW', 'PP', 'NP', 'AP'])],
 		'WHREL': [('right', ['NOUN', 'N', 'PP', 'ADV', 'BW', 'AP'])],
 		'WHSUB': [('right', ['ADV', 'BW', 'NOUN', 'N', 'PP', 'NP', 'AP', 'ADJ',
-			'ADJ'])]}
+		'ADJ'])]}
+# yapf: enable
 
 headrules = {'en': {}}
 # Wrap rule in list to support multiple rules per label.
@@ -116,41 +128,50 @@ def add_head(head_map, tree, head):
 	tree_repr = (tree.span, tree.label)
 	head_map[tree_repr] = head
 
+
 def get_head(head_map, tree):
 	tree_repr = (tree.span, tree.label)
 	return head_map[tree_repr]
 
+
 def first_search(tree, options, head_map):
 	for subtree in tree.subtrees:
-		if get_head(head_map, subtree)[2] in options or subtree.label in options:
+		if get_head(head_map,
+				subtree)[2] in options or subtree.label in options:
 			add_head(head_map, tree, get_head(head_map, subtree))
 			return True
 	return False
+
 
 def last_search(tree, options, head_map):
 	for i in xrange(len(tree.subtrees) - 1, -1, -1):
 		subtree = tree.subtrees[i]
-		if get_head(head_map, subtree)[2] in options or subtree.label in options:
+		if get_head(head_map,
+				subtree)[2] in options or subtree.label in options:
 			add_head(head_map, tree, get_head(head_map, subtree))
 			return True
 	return False
 
+
 def collins_NP(tree, head_map):
 	for subtree in tree.subtrees:
 		collins_find_heads(subtree, head_map)
-	#TODO:todo Extra special cases for NPs
-###	Ignore the row for NPs -- I use a special set of rules for this. For these
-###	I initially remove ADJPs, QPs, and also NPs which dominate a possesive
-###	(tagged POS, e.g.  (NP (NP the man 's) telescope ) becomes
-###	(NP the man 's telescope)). These are recovered as a post-processing stage
-###	after parsing. The following rules are then used to recover the NP head:
+	# TODO: Extra special cases for NPs
 
-	#TODO:todo handle NML properly
+
+# Ignore the row for NPs -- I use a special set of rules for this. For these
+# I initially remove ADJPs, QPs, and also NPs which dominate a possesive
+# (tagged POS, e.g.  (NP (NP the man 's) telescope ) becomes
+# (NP the man 's telescope)). These are recovered as a post-processing stage
+# after parsing. The following rules are then used to recover the NP head:
+
+# TODO: handle NML properly
 
 	if get_head(head_map, tree.subtrees[-1])[2] == 'POS':
 		add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
 		return
-	if last_search(tree, set(['NN', 'NNP', 'NNPS', 'NNS', 'NX', 'POS', 'JJR']), head_map):
+	if last_search(tree, set(['NN', 'NNP', 'NNPS', 'NNS', 'NX', 'POS', 'JJR']),
+			head_map):
 		return
 	if first_search(tree, set(['NP', 'NML']), head_map):
 		return
@@ -161,6 +182,7 @@ def collins_NP(tree, head_map):
 	if last_search(tree, set(['JJ', 'JJS', 'RB', 'QP']), head_map):
 		return
 	add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
+
 
 def collins_find_heads(tree, head_map=None, lang=None):
 	if head_map is None:
@@ -184,9 +206,9 @@ def collins_find_heads(tree, head_map=None, lang=None):
 			collins_NP(tree, head_map)
 		else:
 			# TODO: Consider alternative error announcement means
-###			if tree.label not in ['ROOT', 'TOP', 'S1', '']:
-###				print >> sys.stderr, "Unknown Label: %s" % tree.label
-###				print >> sys.stderr, "In tree:", tree.root()
+			# if tree.label not in ['ROOT', 'TOP', 'S1', '']:
+			# 	print >> sys.stderr, "Unknown Label: %s" % tree.label
+			# 	print >> sys.stderr, "In tree:", tree.root()
 			add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
 		return head_map
 
@@ -214,6 +236,7 @@ def collins_find_heads(tree, head_map=None, lang=None):
 		add_head(head_map, tree, get_head(head_map, tree.subtrees[-1]))
 
 	return head_map
+
 
 '''Text from Collins' website:
 
@@ -381,9 +404,7 @@ Else return the last word
 8 WHNP	0	WDT WP WP$ WHADJP WHPP WHNP
 5 WHPP	1	IN TO FW'''
 
-
 if __name__ == "__main__":
 	print "Running doctest"
 	import doctest
 	doctest.testmod()
-

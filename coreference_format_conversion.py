@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
-'''Converts output from a range of coref systems into the style of the 2011
+"""Converts output from a range of coref systems into the style of the 2011
 CoNLL Shared Task.
 
 For some systems the output is in a single file, for others the filenames are
@@ -10,13 +10,13 @@ assumed to follow this pattern (easily achievable when running the systems):
 source filename:  bn__voa__02__voa_0220__000.<whatever>
 equivalent file:  bn/voa/02/voa_0220.v2_auto_conll
 intended header:  #begin document (bn/voa/02/voa_0220); part 000
-'''
-
+"""
+import os
 import sys
+import glob
+from collections import defaultdict
 from nlp_util import init, coreference_reading, coreference_rendering
 
-import os, glob
-from collections import defaultdict
 
 def convert_underscored_filename(filename):
 	head, tail = os.path.split(filename)
@@ -26,6 +26,7 @@ def convert_underscored_filename(filename):
 	part = name.split('__')[-1]
 	name = '/'.join(name.split('__')[:-1])
 	return name, part
+
 
 def multifile_process(path, call):
 	auto = defaultdict(lambda: {})
@@ -39,74 +40,90 @@ def multifile_process(path, call):
 		auto[name][part] = call(filename, gold[name][part]['text'])
 	return auto, gold
 
+
 def read_bart(auto_src, gold_src):
-	'''BART output is in a separate file for each doc.'''
+	"""BART output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*')
 	call = coreference_reading.read_bart_coref
 	return multifile_process(path, call)
 
+
 def read_cherrypicker(auto_src, gold_src):
-	'''Cherrypicker output is in a separate file for each doc.'''
+	"""Cherrypicker output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*responses')
 	call = coreference_reading.read_cherrypicker_coref
 	return multifile_process(path, call)
 
+
 def read_conll(auto_src, gold_src):
-	'''CoNLL style output, last field is the relevant one.'''
-	auto = coreference_reading.read_conll_doc(auto_src, None, False, False, False, True, False)
+	"""CoNLL style output, last field is the relevant one."""
+	auto = coreference_reading.read_conll_doc(auto_src, None, False, False,
+			False, True, False)
 	gold = coreference_reading.read_conll_matching_files(auto, gold_src)
 	return auto, gold
 
+
 def read_ims(auto_src, gold_src):
-	'''IMS produces CoNLL style output, but with all fields. This will read it as normal.'''
-	auto = coreference_reading.read_conll_doc(auto_src, None, True, False, False, True)
+	"""IMS produces CoNLL style output, but with all fields. This will read it
+	as normal."""
+	auto = coreference_reading.read_conll_doc(auto_src, None, True, False,
+			False, True)
 	gold = coreference_reading.read_conll_matching_files(auto, gold_src)
 	return auto, gold
+
 
 def read_opennlp(auto_src, gold_src):
 	print "OpenNLP support is under development."
 
+
 def read_reconcile(auto_src, gold_src):
-	'''Reconcile output is in a separate file for each doc.'''
+	"""Reconcile output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*coref')
 	call = coreference_reading.read_reconcile_coref
 	return multifile_process(path, call)
 
+
 def read_relaxcor(auto_src, gold_src):
 	print "RelaxCor support is under development."
 
+
 def read_stanford_xml(auto_src, gold_src):
-	'''Stanford without conll settings producesone xml file for each input'''
+	"""Stanford without conll settings producesone xml file for each input"""
 	path = os.path.join(auto_src, '*xml')
 	call = coreference_reading.read_stanford_coref
 	return multifile_process(path, call)
 
+
 def read_stanford(auto_src, gold_src):
-	'''Stanford produces CoNLL style output, but with all fields. This will read it as normal.'''
-	auto = coreference_reading.read_conll_doc(auto_src, None, True, False, False, True)
+	"""Stanford produces CoNLL style output, but with all fields. This will
+	read it as normal."""
+	auto = coreference_reading.read_conll_doc(auto_src, None, True, False,
+			False, True)
 	gold = coreference_reading.read_conll_matching_files(auto, gold_src)
 	return auto, gold
 
+
 def read_uiuc(auto_src, gold_src):
-	'''UIUC output is in a separate file for each doc.'''
+	"""UIUC output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*out')
 	call = coreference_reading.read_uiuc_coref
 	return multifile_process(path, call)
 
+
 if __name__ == '__main__':
 	formats = {
-		'bart': read_bart,
-		'cherrypicker': read_cherrypicker,
-		'conll': read_conll,
-		'ims': read_ims,
-###		'opennlp': read_opennlp,
-		'reconcile': read_reconcile,
-###		'relaxcor': read_relaxcor,
-		'stanford_xml': read_stanford_xml,
-		'stanford': read_stanford,
-		'uiuc': read_uiuc
+			'bart': read_bart, 'cherrypicker': read_cherrypicker,
+			'conll': read_conll, 'ims': read_ims,
+			# 'opennlp': read_opennlp,
+			'reconcile': read_reconcile,
+			# 'relaxcor': read_relaxcor,
+			'stanford_xml': read_stanford_xml, 'stanford': read_stanford,
+			'uiuc': read_uiuc,
 	}
-	init.argcheck(sys.argv, 5, 5, "Translate a system output into the CoNLL format", "<prefix> <[{}]> <dir | file> <gold dir>".format(','.join(formats.keys())))
+	init.argcheck(
+			sys.argv, 5, 5, "Translate a system output into the CoNLL format",
+			"<prefix> <[{}]> <dir | file> <gold dir>".format(','.join(
+			formats.keys())))
 
 	out = open(sys.argv[1] + '.out', 'w')
 	log = open(sys.argv[1] + '.log', 'w')
@@ -124,7 +141,8 @@ if __name__ == '__main__':
 		for part in auto[doc]:
 			for mention in auto[doc][part]['mentions']:
 				if mention[1] >= mention[2]:
-					info = "Invalid mention span {} from {} {}".format(str(mention), doc, part)
+					info = "Invalid mention span {} from {} {}".format(
+							str(mention), doc, part)
 					info += '\n' + gold[doc][part]['text'][mention[0]]
 					raise Exception(info)
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
-
 import pstree
+
 
 class Parse_Error_Set:
 	def __init__(self, gold=None, test=None, include_terminals=False):
@@ -42,7 +42,9 @@ class Parse_Error_Set:
 		return False
 
 	def __len__(self):
-		return len(self.missing) + len(self.extra) + len(self.crossing) + (2*len(self.POS))
+		return len(self.missing) + len(self.extra) + len(
+				self.crossing) + (2 * len(self.POS))
+
 
 def get_errors(test, gold, include_terminals=False):
 	ans = []
@@ -54,7 +56,8 @@ def get_errors(test, gold, include_terminals=False):
 				for gnode in gold:
 					if gnode.word is not None and gnode.span == tnode.span:
 						if gnode.label != tnode.label:
-							ans.append(('diff POS', tnode.span, tnode.label, tnode, gnode.label))
+							ans.append(('diff POS', tnode.span, tnode.label,
+									tnode, gnode.label))
 
 	test_spans = [(span.span[0], span.span[1], span) for span in test]
 	test_spans.sort()
@@ -111,6 +114,7 @@ def get_errors(test, gold, include_terminals=False):
 			ans.append((name, span[2].span, span[2].label, span[2]))
 	return ans
 
+
 def counts_for_prf(test, gold, include_root=False, include_terminals=False):
 	# Note - currently assumes the roots match
 	tcount = 0
@@ -133,6 +137,7 @@ def counts_for_prf(test, gold, include_root=False, include_terminals=False):
 	if include_terminals:
 		match -= len(errors.POS)
 	return match, gcount, tcount, len(errors.crossing), len(errors.POS)
+
 
 if __name__ == '__main__':
 	print "No unit testing implemented for Error_Set"

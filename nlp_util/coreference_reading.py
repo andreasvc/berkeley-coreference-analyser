@@ -1,17 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: set ts=2 sw=2 noet:
-
-import sys, os
-import pstree, treebanks, head_finder, render_tree
+import os
+import re
+import sys
+import glob
+import fnmatch
 from collections import defaultdict
 from StringIO import StringIO
-import re
-import glob, fnmatch
+import pstree
+import treebanks
+import head_finder
+import render_tree
+
 
 def read_conll_parses(lines):
 	in_file = StringIO(''.join(lines))
 	return treebanks.read_trees(in_file, treebanks.conll_read_tree)
+
 
 def read_conll_text(lines):
 	text = [[]]
@@ -25,6 +31,7 @@ def read_conll_text(lines):
 		text.pop()
 	return text
 
+
 def read_conll_ner(lines):
 	info = {}
 	word = 0
@@ -37,25 +44,27 @@ def read_conll_ner(lines):
 			if '(' in ner_info and '*' in ner_info:
 				cur.append((ner_info[1:-1], sentence, word))
 			elif '(' in ner_info and ')' in ner_info:
-				info[sentence, word, word +1] = ner_info[1:-1]
+				info[sentence, word, word + 1] = ner_info[1:-1]
 			elif ')' in ner_info and '*' in ner_info:
 				start = cur.pop()
 				if sentence != start[1]:
 					print >> sys.stderr, "Something mucked up", sentence, word, start
-				info[sentence, start[2], word +1] = start[0]
+				info[sentence, start[2], word + 1] = start[0]
 		word += 1
 		if len(fields) == 0:
 			sentence += 1
 			word = 0
 	return info
 
+
 def read_conll_coref(lines):
 	# Assumes:
 	#  - Reading a single part
 	#  - If duplicate mentions occur, use the first
 	regex = "([(][0-9]*[)])|([(][0-9]*)|([0-9]*[)])|([|])"
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(lambda: []
+			)  # ID -> list of (sentence, start, end+1)s
 	unmatched_mentions = defaultdict(lambda: [])
 
 	sentence = 0
@@ -63,7 +72,7 @@ def read_conll_coref(lines):
 	line_no = 0
 	for line in lines:
 		line_no += 1
-		if len(line) > 0 and line[0] =='#':
+		if len(line) > 0 and line[0] == '#':
 			continue
 		line = line.strip()
 		if len(line) == 0:
@@ -84,33 +93,42 @@ def read_conll_coref(lines):
 				else:
 					val = int(triple[2][:-1])
 					if (sentence, val) not in unmatched_mentions:
-###						print ''.join(lines[:20])
-###						print triple
-###						print fields
-###						print line
-###						print line_no, len(lines)
-###						raise Exception("Ending mention with no start: " + str(val))
-						print >> sys.stderr, "Ignoring a mention with no start", str(val), line.strip(), line_no
+						# print ''.join(lines[:20])
+						# print triple
+						# print fields
+						# print line
+						# print line_no, len(lines)
+						# raise Exception(
+						# 		"Ending mention with no start: " + str(val))
+						print >> sys.stderr, "Ignoring a mention with no start",
+						print >> sys.stderr, str(val), line.strip(), line_no
 						continue
 					if len(unmatched_mentions[(sentence, val)]) == 0:
-						print >> sys.stderr, "No other start available", str(val), line.strip(), line_no
+						print >> sys.stderr, "No other start available", str(
+								val), line.strip(), line_no
 						continue
 					start = unmatched_mentions[(sentence, val)].pop()
 				end = word + 1
 				if (sentence, start, end) in mentions:
-					print >> sys.stderr, "Duplicate mention", sentence, start, end, val, mentions[sentence, start, end]
+					print >> sys.stderr, "Duplicate mention",
+					print >> sys.stderr, sentence, start, end, val, mentions[
+							sentence, start, end]
 				else:
 					mentions[sentence, start, end] = val
 					clusters[val].append((sentence, start, end))
 		word += 1
 	for key in unmatched_mentions:
 		if len(unmatched_mentions[key]) > 0:
-			print >> sys.stderr, "Mention started, but did not end ", str(unmatched_mentions[key])
-###			raise Exception("Mention started, but did not end " + str(unmatched_mentions[key]))
+			print >> sys.stderr, "Mention started, but did not end ", str(
+					unmatched_mentions[key])
+			# raise Exception(
+			# 		"Mention started, but did not end "
+			# 		+ str(unmatched_mentions[key]))
 	return mentions, clusters
 
+
 def read_stanford_coref(filename, gold_text):
-	'''Example (most of the file clipped):
+	"""Example (most of the file clipped):
     <coreference>
       <coreference>
         <mention representative="true">
@@ -140,9 +158,10 @@ def read_stanford_coref(filename, gold_text):
           <head>1</head>
         </mention>
       </coreference>
-    </coreference>'''
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+    </coreference>"""
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(lambda: []
+			)  # ID -> list of (sentence, start, end+1)s
 	text = [[]]
 	sentence = None
 	start = None
@@ -155,7 +174,9 @@ def read_stanford_coref(filename, gold_text):
 			if '<sentence>' not in line:
 				text.append([])
 			else:
-				sentence = int(line.split('<sentence>')[1].split('</sentence>')[0]) - 1
+				sentence = int(
+						line.split('<sentence>')[1].split('</sentence>')
+						[0]) - 1
 		elif '<start>' in line:
 			start = int(line.split('<start>')[1].split('</start>')[0]) - 1
 		elif '<end>' in line:
@@ -164,19 +185,27 @@ def read_stanford_coref(filename, gold_text):
 			cluster += 1
 		elif '</mention>' in line:
 			if (sentence, start, end) in mentions:
-				print "Duplicate mention:", cluster, mentions[sentence, start, end]
+				print "Duplicate mention:", cluster, mentions[sentence, start,
+						end]
 			else:
 				mentions[sentence, start, end] = cluster
 				clusters[cluster].append((sentence, start, end))
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
+
 def read_uiuc_coref(filename, gold_text):
-	'''Example:
-	After *Mingxia Fu*_5 won **the champion for the *women*_8 platform*_6 diving*_4 , *the coach of *the *Soviet Union*_3 team*_0*_1 congratulated *her*_1 warmly . Photo taken by **Xinhua News Agency*_2 reporter*_7 , *Zhishan Cheng*_7 .
-	Note that occasionally words have *s, e.g. *when*, in which case this hits issues without manual editing of the text.
-	'''
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+	"""Example:
+	After *Mingxia Fu*_5 won **the champion for the *women*_8 platform*_6
+	diving*_4 , *the coach of *the *Soviet Union*_3 team*_0*_1 congratulated
+	*her*_1 warmly . Photo taken by **Xinhua News Agency*_2 reporter*_7 ,
+	*Zhishan Cheng*_7 .
+
+	Note that occasionally words have *s, e.g. *when*, in which case this hits
+	issues without manual editing of the text.
+	"""
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(lambda: []
+			)  # ID -> list of (sentence, start, end+1)s
 	unmatched_mentions = []
 	text = [[]]
 	sentence = 0
@@ -203,7 +232,8 @@ def read_uiuc_coref(filename, gold_text):
 					if msentence != sentence:
 						end = len(gold_text[msentence])
 					if (msentence, start, end) in mentions:
-						print "Duplicate mention:", cluster, mentions[msentence, start, end]
+						print "Duplicate mention:", cluster, mentions[
+								msentence, start, end]
 					else:
 						mentions[msentence, start, end] = cluster
 						clusters[cluster].append((msentence, start, end))
@@ -241,13 +271,18 @@ def read_uiuc_coref(filename, gold_text):
 		text.pop()
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
+
 def read_cherrypicker_coref(filename, gold_text):
-	'''Example:
-	<COREF ID="8" REF="7">Giant</COREF> agreed last month to purchase the <COREF ID="3" REF="2">carrier</COREF> .
-	Note, some manual editing was also required to deal with '+'s being split off.'''
+	"""Example:
+	<COREF ID="8" REF="7">Giant</COREF> agreed last month to purchase the
+	<COREF ID="3" REF="2">carrier</COREF> .
+
+	Note, some manual editing was also required to deal with '+'s being split
+	off."""
 	regex = '(<COREF [^>]*>)|(</COREF> *)|( *[^< ][^< ]* *)'
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(lambda: []
+			)  # ID -> list of (sentence, start, end+1)s
 	unmatched_mentions = []
 	text = [[]]
 	sentence = 0
@@ -258,12 +293,15 @@ def read_cherrypicker_coref(filename, gold_text):
 	for line in open(filename):
 		for coref_start, coref_end, token in re.findall(regex, line.strip()):
 			if token != '':
-###				print token, gold_text[sentence][word]
+				# print token, gold_text[sentence][word]
 				token = token.strip()
 				allowed = token == gold_text[sentence][word]
 				allowed = allowed or token in '{}[]()'
-				allowed = allowed or (token in word_convert and word_convert[token] == gold_text[sentence][word])
-				allowed = allowed or '/'.join(token.split('_')) == gold_text[sentence][word]
+				allowed = allowed or (
+						token in word_convert
+						and word_convert[token] == gold_text[sentence][word])
+				allowed = allowed or '/'.join(
+						token.split('_')) == gold_text[sentence][word]
 				if allowed:
 					prev = ['', '']
 					word += 1
@@ -273,17 +311,18 @@ def read_cherrypicker_coref(filename, gold_text):
 						prev[0] = gold_text[sentence][word]
 						prev[1] = token
 						text[-1].append(token)
-###						print prev, token, filename
-					elif prev[1] + token == prev[0] or '/'.join((prev[1] + token).split('_')) == prev[0]:
+						# print prev, token, filename
+					elif prev[1] + token == prev[0] or '/'.join(
+							(prev[1] + token).split('_')) == prev[0]:
 						if len(text[-1]) == 0:
 							text[-2][-1] = prev[0]
 						else:
 							text[-1][-1] = prev[0]
 						word += 1
 						prev = ['', '']
-###						print prev, token, filename
+						# print prev, token, filename
 					else:
-###						print prev, token, filename
+						# print prev, token, filename
 						prev[1] += token
 
 				if word == len(gold_text[sentence]):
@@ -293,7 +332,8 @@ def read_cherrypicker_coref(filename, gold_text):
 			elif coref_start != '':
 				mention_id = int(coref_start.split('ID="')[1].split('"')[0])
 				if 'REF=' in coref_start:
-					cluster = mapping[int(coref_start.split('REF="')[1].split('"')[0])]
+					cluster = mapping[int(
+							coref_start.split('REF="')[1].split('"')[0])]
 				else:
 					cluster = mention_id
 				mapping[mention_id] = cluster
@@ -311,8 +351,9 @@ def read_cherrypicker_coref(filename, gold_text):
 		text.pop()
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
+
 def read_bart_coref(filename, gold_text):
-	'''Example output:
+	"""Example output:
 	<s>
 	<coref set-id="set_24">
 	<w pos="prp">It</w>
@@ -338,11 +379,11 @@ def read_bart_coref(filename, gold_text):
 	<w pos="jj">new</w>
 	<w pos="nn">perspective</w>
 	<w pos=".">.</w>
-	</s>'''
+	</s>"""
 	regex = '(<[^>]*>)|([^<]* *)'
 	text = [[]]
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(list)  # ID -> list of (sentence, start, end+1)s
 	unmatched_mentions = []
 	sentence = 0
 	word = 0
@@ -355,13 +396,15 @@ def read_bart_coref(filename, gold_text):
 				if '&middot;' in token:
 					pass
 				elif token != gold_text[sentence][word]:
-###					if len(prev) > 2:
-###						print gold_text[sentence][word], token, ''.join(prev), filename
+					# if len(prev) > 2:
+					# 	print gold_text[sentence][word],
+					# 	print token, ''.join(prev), filename
 					if len(prev) == 0:
 						prev.append(token)
 						token = None
 					else:
-						if ''.join(prev + [token]) == gold_text[sentence][word]:
+						if (''.join(prev + [token])
+								== gold_text[sentence][word]):
 							token = ''.join(prev + [token])
 							prev = []
 						else:
@@ -390,13 +433,18 @@ def read_bart_coref(filename, gold_text):
 		text.pop()
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
+
 def read_reconcile_coref(filename, gold_text):
-	'''Example output:
-	<NP NO="14" CorefID="11">It</NP> must also evaluate <NP NO="15" CorefID="26">the real - estate market</NP> in <NP      NO="16" CorefID="16">the chosen location from <NP NO="17" CorefID="17">a new perspective</NP></NP> .'''
+	"""Example output:
+	<NP NO="14" CorefID="11">It</NP> must also evaluate
+	<NP NO="15" CorefID="26">the real - estate market</NP> in
+	<NP NO="16" CorefID="16">the chosen location from
+	<NP NO="17" CorefID="17">a new perspective</NP></NP> ."""
 	regex = '(<[^>]*>)|( *[^< ][^< ]* *)'
 	text = [[]]
-	mentions = {} # (sentence, start, end+1) -> ID
-	clusters = defaultdict(lambda: []) # ID -> list of (sentence, start, end+1)s
+	mentions = {}  # (sentence, start, end+1) -> ID
+	clusters = defaultdict(lambda: []
+			)  # ID -> list of (sentence, start, end+1)s
 	unmatched_mentions = []
 	sentence = 0
 	word = 0
@@ -406,14 +454,15 @@ def read_reconcile_coref(filename, gold_text):
 			if token != '':
 				token = token.strip()
 				if token != gold_text[sentence][word]:
-###					if len(prev) > 2:
-###						print "'%s' '%s'" % (token, gold_text[sentence][word])
-###						print ''.join(prev), sentence, word, filename
+					# if len(prev) > 2:
+					# 	print "'%s' '%s'" % (token, gold_text[sentence][word])
+					# 	print ''.join(prev), sentence, word, filename
 					if len(prev) == 0:
 						prev.append(token)
 						token = None
 					else:
-						if ''.join(prev + [token]) == gold_text[sentence][word]:
+						if (''.join(prev + [token])
+								== gold_text[sentence][word]):
 							token = ''.join(prev + [token])
 							prev = []
 						else:
@@ -442,7 +491,15 @@ def read_reconcile_coref(filename, gold_text):
 		text.pop()
 	return {'clusters': clusters, 'mentions': mentions, 'text': text}
 
-def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rclusters=True, rner=True, lang=None):
+
+def read_conll_doc(filename,
+		ans=None,
+		rtext=True,
+		rparses=True,
+		rheads=True,
+		rclusters=True,
+		rner=True,
+		lang=None):
 	# Read entire file, inserting into a dictionary:
 	#  key - the #begin <blah> info
 	#  value - a dict, one entry per part, each entry contains:
@@ -455,7 +512,8 @@ def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rc
 	cur = []
 	keys = None
 	for line in open(filename):
-		if len(line) > 0 and line.startswith('#begin') or line.startswith('#end'):
+		if len(line) > 0 and line.startswith('#begin') or line.startswith(
+				'#end'):
 			if 'begin' in line:
 				desc = line.split()
 				location = desc[2].strip('();')
@@ -465,7 +523,8 @@ def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rc
 					keys = ("tc/ch/00/ch_%04d" % val, keys[1])
 			if len(cur) > 0:
 				if keys is None:
-					print >> sys.stderr, "Error reading conll file - invalid #begin statemen\n", line
+					print >> sys.stderr, "Error reading conll file - ",
+					print >> sys.stderr, "invalid #begin statement\n", line
 				else:
 					info = {}
 					if rtext:
@@ -474,11 +533,13 @@ def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rc
 						info['parses'] = read_conll_parses(cur)
 						if rheads:
 							info['heads'] = [
-									head_finder.collins_find_heads(
-										parse, lang=lang)
-									for parse in info['parses']]
+									head_finder.collins_find_heads(parse,
+									lang=lang)
+									for parse in info['parses']
+							]
 					if rclusters:
-						info['mentions'], info['clusters'] = read_conll_coref(cur)
+						info['mentions'], info['clusters'] = read_conll_coref(
+								cur)
 					if rner:
 						info['ner'] = read_conll_ner(cur)
 					ans[keys[0]][keys[1]] = info
@@ -488,6 +549,7 @@ def read_conll_doc(filename, ans=None, rtext=True, rparses=True, rheads=True, rc
 			cur.append(line)
 	return ans
 
+
 def read_conll_gold_files(dir_prefix):
 	ans = defaultdict(lambda: {})
 	query = os.path.join(dir_prefix, '*/*/*/*gold*conll')
@@ -495,8 +557,10 @@ def read_conll_gold_files(dir_prefix):
 		read_conll_doc(filename, ans)
 	return ans
 
+
 def read_conll_coref_system_output(filename, ans=None):
 	return read_conll_doc(filename, ans, False, False, False, True)
+
 
 def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if ans is None:
@@ -509,8 +573,11 @@ def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if len(filenames) == 1:
 		read_conll_doc(filenames[0], ans, lang=lang)
 	else:
-		print >> sys.stderr, "Reading matching doc failed for %s/%s as %d files were found." % (dir_prefix, filename, len(filenames))
+		print >> sys.stderr, ("Reading matching doc failed for %s/%s as "
+				"%d files were found."
+				% (dir_prefix, filename, len(filenames)))
 	return ans
+
 
 def read_conll_matching_files(conll_docs, dir_prefix, lang=None):
 	# Read the corresponding file under dir_prefix
@@ -522,6 +589,7 @@ def read_conll_matching_files(conll_docs, dir_prefix, lang=None):
 		ans = read_conll_matching_file(dir_prefix, filename, ans, lang=lang)
 	return ans
 
+
 def read_conll_all(dir_prefix, suffix="auto_conll"):
 	ans = None
 	for root, dirnames, filenames in os.walk(dir_prefix):
@@ -529,57 +597,60 @@ def read_conll_all(dir_prefix, suffix="auto_conll"):
 			ans = read_conll_doc(os.path.join(root, filename), ans)
 	return ans
 
-def read_conll_scorer_output(text):
-	'''
 
-	>>> text = """version: 1.07
-	...
-	... METRIC muc:
-	...
-	... ====== TOTALS =======
-	... Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
-	... --------------------------------------------------------------------------
-	... Coreference: Recall: (6891 / 10539) 65.38%	Precision: (6891 / 9671) 71.25%	F1: 68.19%
-	... --------------------------------------------------------------------------
-	...
-	... METRIC bcub:
-	...
-	... ====== TOTALS =======
-	... Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
-	... --------------------------------------------------------------------------
-	... Coreference: Recall: (9445.16162068698 / 14291) 66.09%	Precision: (13366.8103055043 / 17210) 77.66%	F1: 71.41%
-	... --------------------------------------------------------------------------
-	...
-	... METRIC ceafm:
-	...
-	... ====== TOTALS =======
-	... Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
-	... --------------------------------------------------------------------------
-	... Coreference: Recall: (10046 / 14291) 70.29%	Precision: (11103 / 17210) 64.51%	F1: 67.28%
-	... --------------------------------------------------------------------------
-	...
-	... METRIC ceafe:
-	...
-	... ====== TOTALS =======
-	... Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
-	... --------------------------------------------------------------------------
-	... Coreference: Recall: (3490.14880751078 / 6671) 52.31%	Precision: (3490.14880751078 / 7539) 46.29%	F1: 49.12%
-	... --------------------------------------------------------------------------
-	...
-	... METRIC blanc:
-	...
-	... ====== TOTALS =======
-	... Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
-	... --------------------------------------------------------------------------
-	...
-	... Coreference:
-	... Coreference links: Recall: (33214 / 54427) 61.02%	Precision: (33214 / 51699) 64.24%	F1: 62.59%
-	... --------------------------------------------------------------------------
-	... Non-coreference links: Recall: (785075 / 803560) 97.69%	Precision: (785075 / 806288) 97.36%	F1: 97.53%
-	... --------------------------------------------------------------------------
-	... BLANC: Recall: (0.793622353566206 / 1) 79.36%	Precision: (0.80807005307929 / 1) 80.8%	F1: 80.06%
-	... --------------------------------------------------------------------------"""
-	>>> results = read_conll_scorer_output(text)
+CONLLSCORER_EXAMPLE_OUTPUT = """version: 1.07
+
+METRIC muc:
+
+====== TOTALS =======
+Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
+--------------------------------------------------------------------------
+Coreference: Recall: (6891 / 10539) 65.38%	Precision: (6891 / 9671) 71.25%	F1: 68.19%
+--------------------------------------------------------------------------
+
+METRIC bcub:
+
+====== TOTALS =======
+Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
+--------------------------------------------------------------------------
+Coreference: Recall: (9445.16162068698 / 14291) 66.09%	Precision: (13366.8103055043 / 17210) 77.66%	F1: 71.41%
+--------------------------------------------------------------------------
+
+METRIC ceafm:
+
+====== TOTALS =======
+Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
+--------------------------------------------------------------------------
+Coreference: Recall: (10046 / 14291) 70.29%	Precision: (11103 / 17210) 64.51%	F1: 67.28%
+--------------------------------------------------------------------------
+
+METRIC ceafe:
+
+====== TOTALS =======
+Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
+--------------------------------------------------------------------------
+Coreference: Recall: (3490.14880751078 / 6671) 52.31%	Precision: (3490.14880751078 / 7539) 46.29%	F1: 49.12%
+--------------------------------------------------------------------------
+
+METRIC blanc:
+
+====== TOTALS =======
+Identification of Mentions: Recall: (10049 / 14291) 70.31%	Precision: (10049 / 12968) 77.49%	F1: 73.72%
+--------------------------------------------------------------------------
+
+Coreference:
+Coreference links: Recall: (33214 / 54427) 61.02%	Precision: (33214 / 51699) 64.24%	F1: 62.59%
+--------------------------------------------------------------------------
+Non-coreference links: Recall: (785075 / 803560) 97.69%	Precision: (785075 / 806288) 97.36%	F1: 97.53%
+--------------------------------------------------------------------------
+BLANC: Recall: (0.793622353566206 / 1) 79.36%	Precision: (0.80807005307929 / 1) 80.8%	F1: 80.06%
+--------------------------------------------------------------------------"""
+
+
+def read_conll_scorer_output(text):
+	"""
+
+	>>> results = read_conll_scorer_output(CONLLSCORER_EXAMPLE_OUTPUT)
 	>>> for metric in results:
 	...   print metric, results[metric]
 	bcub [77.66, 66.09, 71.41]
@@ -588,7 +659,7 @@ def read_conll_scorer_output(text):
 	mentions [77.49, 70.31, 73.72]
 	ceafe [46.29, 52.31, 49.12]
 	blanc [80.8, 79.36, 80.06]
-	'''
+	"""
 	metric = None
 	totals = False
 	results = defaultdict(lambda: [])
@@ -605,7 +676,8 @@ def read_conll_scorer_output(text):
 			if precision + recall > 0:
 				fscore = 2 * precision * recall / (precision + recall)
 			results['mentions'] = [precision, recall, fscore]
-		elif totals and (('Coreference' in line and metric != 'blanc') or 'BLANC:' in line):
+		elif totals and (('Coreference' in line and metric != 'blanc')
+				or 'BLANC:' in line):
 			recall = float(fields[2][1:]) / float(fields[4][:-1])
 			precision = float(fields[7][1:]) / float(fields[9][:-1])
 			fscore = 0.0
@@ -622,8 +694,8 @@ def read_conll_scorer_output(text):
 				results['conll'][i] += results[metric][i] / 3.0
 	return results
 
-###if __name__ == "__main__":
-###	print "Running doctest"
-###	import doctest
-###	doctest.testmod()
 
+# if __name__ == "__main__":
+# 	print "Running doctest"
+# 	import doctest
+# 	doctest.testmod()
