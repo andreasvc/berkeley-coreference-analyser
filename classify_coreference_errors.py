@@ -433,12 +433,13 @@ def cluster_error_properties(cluster, text, parses, heads, gold_doc, lang):
 	# Number of cataphoric pronouns
 	cataphora = 0
 	non_pronoun = min_non_pronoun(cluster, text, parses, heads, lang, True)
-	for mention in cluster:
-		if mention < non_pronoun:
-			mtype = coreference.mention_type(mention, text, parses, heads,
-					lang)
-			if mtype == 'pronoun':
-				cataphora += 1
+	if non_pronoun is not None:
+		for mention in cluster:
+			if mention < non_pronoun:
+				mtype = coreference.mention_type(mention, text, parses, heads,
+						lang)
+				if mtype == 'pronoun':
+					cataphora += 1
 	ans.append(cataphora)
 
 	# NER types
