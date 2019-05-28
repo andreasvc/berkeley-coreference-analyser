@@ -346,8 +346,9 @@ def conll_read_tree(source,
 		if len(line) == 0 or line[0] == '#':
 			continue
 		line = line.split()
-		word = line[3]
-		pos = line[4]
+		# escape parentheses to avoid malformed trees
+		word = line[3].replace('(', '-LRB-').replace(')', '-LRB-')
+		pos = line[4].replace('(', '[').replace(')', ']')
 		tree = line[5]
 		tree = tree.split('*')
 		text += '%s(%s %s)%s' % (tree[0], pos, word, tree[1])
