@@ -15,12 +15,13 @@ from __future__ import print_function, absolute_import
 import os
 import sys
 import glob
+import getopt
 from collections import defaultdict
 from nlp_util import init, coreference_reading, coreference_rendering
 
 
 def convert_underscored_filename(filename):
-	head, tail = os.path.split(filename)
+	_head, tail = os.path.split(filename)
 	if tail is None or tail == '':
 		raise Exception("Impossible filename")
 	name = tail.split('.')[0]
@@ -29,7 +30,7 @@ def convert_underscored_filename(filename):
 	return name, part
 
 
-def multifile_process(path, call):
+def multifile_process(path, call, gold_src):
 	auto = defaultdict(lambda: {})
 	gold = defaultdict(lambda: {})
 	for filename in glob.glob(path):
@@ -46,14 +47,14 @@ def read_bart(auto_src, gold_src):
 	"""BART output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*')
 	call = coreference_reading.read_bart_coref
-	return multifile_process(path, call)
+	return multifile_process(path, call, gold_src)
 
 
 def read_cherrypicker(auto_src, gold_src):
 	"""Cherrypicker output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*responses')
 	call = coreference_reading.read_cherrypicker_coref
-	return multifile_process(path, call)
+	return multifile_process(path, call, gold_src)
 
 
 def read_conll(auto_src, gold_src):
@@ -74,25 +75,25 @@ def read_ims(auto_src, gold_src):
 
 
 def read_opennlp(auto_src, gold_src):
-	print("OpenNLP support is under development.")
+	raise NotImplementedError
+
+
+def read_relaxcor(auto_src, gold_src):
+	raise NotImplementedError
 
 
 def read_reconcile(auto_src, gold_src):
 	"""Reconcile output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*coref')
 	call = coreference_reading.read_reconcile_coref
-	return multifile_process(path, call)
-
-
-def read_relaxcor(auto_src, gold_src):
-	print("RelaxCor support is under development.")
+	return multifile_process(path, call, gold_src)
 
 
 def read_stanford_xml(auto_src, gold_src):
 	"""Stanford without conll settings producesone xml file for each input"""
 	path = os.path.join(auto_src, '*xml')
 	call = coreference_reading.read_stanford_coref
-	return multifile_process(path, call)
+	return multifile_process(path, call, gold_src)
 
 
 def read_stanford(auto_src, gold_src):
@@ -108,42 +109,49 @@ def read_uiuc(auto_src, gold_src):
 	"""UIUC output is in a separate file for each doc."""
 	path = os.path.join(auto_src, '*out')
 	call = coreference_reading.read_uiuc_coref
-	return multifile_process(path, call)
+	return multifile_process(path, call, gold_src)
 
 
-if __name__ == '__main__':
+def main():
 	formats = {
-			'bart': read_bart, 'cherrypicker': read_cherrypicker,
-			'conll': read_conll, 'ims': read_ims,
+			'bart': read_bart,
+			'cherrypicker': read_cherrypicker,
+			'conll': read_conll,
+			'ims': read_ims,
 			# 'opennlp': read_opennlp,
 			'reconcile': read_reconcile,
 			# 'relaxcor': read_relaxcor,
-			'stanford_xml': read_stanford_xml, 'stanford': read_stanford,
+			'stanford_xml': read_stanford_xml,
+			'stanford': read_stanford,
 			'uiuc': read_uiuc,
 	}
-    try:
-        _opts, args = getopt.gnu_getopt(sys.argv[1:], '', [])
-        output_prefix, fmt, auto_src, gold_src = args
-    except (getopt.GetoptError, ValueError):
-        print('Translate a system output into the CoNLL format')
-        print('./%s <prefix> <[%s]> <dir | file> <gold dir>'
+	try:
+		_opts, args = getopt.gnu_getopt(sys.argv[1:], '', [])
+		output_prefix, fmt, auto_src, gold_src = args
+	except (getopt.GetoptError, ValueError):
+		print('Translate a system output into the CoNLL format')
+		print('./%s <prefix> <[%s]> <dir | file> <gold dir>'
 				% (sys.argv[0], ','.join(formats)))
-        return
+		return
 	if fmt not in formats:
 		print("Invalid format.  Valid options are:")
 		print('\n'.join(formats))
 		return
 
-	with (open(output_prefix + '.out', 'w') as out,
-			open(output_prefix + '.log', 'w') as log):
-		init.header(sys.argv, log)
-		auto, gold = formats[fmt](auto_src, gold_src)
-		for doc in auto:
-			for part in auto[doc]:
-				for mention in auto[doc][part]['mentions']:
-					if mention[1] >= mention[2]:
-						info = "Invalid mention span {} from {} {}".format(
-								str(mention), doc, part)
-						info += '\n' + gold[doc][part]['text'][mention[0]]
-						raise Exception(info)
-		coreference_rendering.print_conll_style(auto, gold, out)
+	with open(output_prefix + '.out', 'w') as out:
+		with open(output_prefix + '.log', 'w') as log:
+			init.header(sys.argv, log)
+			auto, gold = formats[fmt](auto_src, gold_src)
+			for doc in auto:
+				for part in auto[doc]:
+					for mention in auto[doc][part]['mentions']:
+						if mention[1] >= mention[2]:
+							info = "Invalid mention span {} from {} {}".format(
+									str(mention), doc, part)
+							info += '\n' + gold[doc][part]['text'][mention[0]]
+							raise Exception(info)
+			coreference_rendering.print_conll_style(auto, gold, out)
+
+
+if __name__ == '__main__':
+	main()
