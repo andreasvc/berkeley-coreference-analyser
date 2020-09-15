@@ -93,9 +93,20 @@ Running the commands with an invalid number of arguments will give you the follo
 
 ./print_errors.py <prefix> <gold_dir> <test_file> [--resolvespanerrors] [--lang=<en|nl>]
 
-./coreference_format_conversion.py <prefix> <[cherrypicker,ims,bart,conll,stanford_xml,stanford,uiuc,reconcile]> <dir | file> <gold dir>
+./coreference_format_conversion.py <prefix> <[cherrypicker,ims,bart,conll,stanford_xml,stanford,uiuc,reconcile]> <dir | file> <gold_dir>
 ```
 By default all optional flags are disabled and English data is expected.
+
+- `prefix`: write output to filenames starting with this prefix;
+   e.g., passing `/tmp/foo` will create files /tmp/foo.gold, /tmp/foo.system, etc.
+- `gold_dir`: specify a directory with gold conll files
+- `test_file`: the conll file with the system output; for each document in this
+  file, a corresponding gold file is searched in `gold_dir`; i.e., if
+  `test_file` contains `#begin document foo`, the corresponding file
+  `gold_dir/foo.conll` should exist.
+
+The output contains colors with ANSI codes. To view the colors and scroll through the output,
+use `less -R` or [bat](https://github.com/sharkdp/bat).
 
 ##  Questions and Answers
 
