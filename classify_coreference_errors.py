@@ -797,6 +797,18 @@ def process_document(doc_name,
 		for cluster in to_remove:
 			auto_clusters.pop(cluster)
 
+		# NB: this changes the gold data, but otherwise the comparison is not
+		# valid since gold may have singletons while these have just been
+		# removed from the system output.
+		to_remove = set()
+		for cluster in gold_clusters:
+			if len(gold_clusters[cluster]) == 1:
+				to_remove.add(cluster)
+				for mention in gold_clusters[cluster]:
+					gold_mentions.pop(mention)
+		for cluster in to_remove:
+			gold_clusters.pop(cluster)
+
 	gold_cluster_set = coreference.set_of_clusters(gold_clusters)
 	auto_cluster_set = coreference.set_of_clusters(auto_clusters)
 	gold_mention_set = coreference.set_of_mentions(gold_clusters)
