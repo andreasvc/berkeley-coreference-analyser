@@ -348,7 +348,10 @@ def conll_read_tree(source,
 		line = line.split()
 		# escape parentheses to avoid malformed trees
 		word = line[3].replace('(', '-LRB-').replace(')', '-LRB-')
-		pos = line[4].replace('(', '[').replace(')', ']')
+		try:
+			pos = line[4].replace('(', '[').replace(')', ']')
+		except IndexError:
+			raise ValueError('conll file does not contain a POS tag column.')
 		tree = line[5]
 		tree = tree.split('*')
 		text += '%s(%s %s)%s' % (tree[0], pos, word, tree[1])

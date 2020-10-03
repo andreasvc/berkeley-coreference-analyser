@@ -46,7 +46,8 @@ def read_conll_ner(lines):
 			elif ')' in ner_info and '*' in ner_info:
 				start = cur.pop()
 				if sentence != start[1]:
-					print("Something mucked up", sentence, word, start, file=sys.stderr)
+					print("Something mucked up", sentence, word, start,
+							file=sys.stderr)
 				info[sentence, start[2], word + 1] = start[0]
 		word += 1
 		if len(fields) == 0:
@@ -98,7 +99,8 @@ def read_conll_coref(lines):
 						# print line_no, len(lines)
 						# raise Exception(
 						# 		"Ending mention with no start: " + str(val))
-						print("Ignoring a mention with no start", end=' ', file=sys.stderr)
+						print("Ignoring a mention with no start", end=' ',
+								file=sys.stderr)
 						print(str(val), line.strip(), line_no, file=sys.stderr)
 						continue
 					if len(unmatched_mentions[(sentence, val)]) == 0:
@@ -108,9 +110,9 @@ def read_conll_coref(lines):
 					start = unmatched_mentions[(sentence, val)].pop()
 				end = word + 1
 				if (sentence, start, end) in mentions:
-					print("Duplicate mention", end=' ', file=sys.stderr)
-					print(sentence, start, end, val, mentions[
-							sentence, start, end], file=sys.stderr)
+					print('Duplicate mention',
+							sentence, start, end, val,
+							mentions[sentence, start, end], file=sys.stderr)
 				else:
 					mentions[sentence, start, end] = val
 					clusters[val].append((sentence, start, end))
@@ -563,6 +565,10 @@ def read_conll_coref_system_output(filename, ans=None):
 def read_conll_matching_file(dir_prefix, filename, ans=None, lang=None):
 	if ans is None:
 		ans = defaultdict(lambda: {})
+	query = os.path.join(dir_prefix, filename + '.conll')
+	if os.path.exists(query):  # prefer exact match
+		read_conll_doc(query, ans, lang=lang)
+		return ans
 	query = os.path.join(dir_prefix, filename + '*conll')
 	filenames = glob.glob(query)
 	if len(filenames) > 1:
